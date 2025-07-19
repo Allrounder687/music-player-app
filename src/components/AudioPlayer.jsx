@@ -28,6 +28,7 @@ export const AudioPlayer = () => {
   const loadingRef = useRef(false); // Ref to track loading state to prevent race conditions
   const analyzerInitialized = useRef(false);
   const animationFrameRef = useRef(null);
+  const timeUpdateRef = useRef(null); // Ref to throttle time updates
 
   // Load audio when track changes
   useEffect(() => {
@@ -48,42 +49,31 @@ export const AudioPlayer = () => {
 
         console.log("Current track:", currentTrack);
 
-        // Determine the source for the audio
-        let url;
+        // Show loading notification
+        if (window.showToast) {
+          window.showToast(`Loading: ${currentTrack.title}`, "info", 2000);
+        }
 
-        // If we have the actual File object, use it directly
-        if (currentTrack.file instanceof File) {
-          console.log(`Using File object directly: ${currentTrack.file.name}`);
-          url = URL.createObjectURL(currentTrack.file);
-          console.log(`Created new blob URL from File: ${url}`);
-        }
-        // For sample files with relative paths
-        else if (
+        // Determine the source for the audio
+        let sourcePath;
+
+        // For imported files, the previewUrl might already be a blob URL
+        if (
           currentTrack.previewUrl &&
-          currentTrack.previewUrl.startsWith("/")
+          currentTrack.previewUrl.startsWith("blob:")
         ) {
-          url = currentTrack.previewUrl;
-          console.log(`Using sample file path: ${url}`);
-        }
-        // For streaming URLs
-        else if (
-          currentTrack.previewUrl &&
-          (currentTrack.previewUrl.startsWith("http://") ||
-            currentTrack.previewUrl.startsWith("https://"))
-        ) {
-          url = currentTrack.previewUrl;
-          console.log(`Using streaming URL: ${url}`);
+          sourcePath = currentTrack.previewUrl;
+          console.log(`Using existing blob URL: ${sourcePath}`);
         }
         // For local files, use path or filePath
         else if (currentTrack.path || currentTrack.filePath) {
-          const sourcePath = currentTrack.path || currentTrack.filePath;
-          url = await createAudioUrl(sourcePath);
-          console.log(`Created audio URL from path: ${url}`);
+          sourcePath = currentTrack.path || currentTrack.filePath;
+          console.log(`Using file path: ${sourcePath}`);
         }
-        // For any other case, try the previewUrl
+        // For streaming URLs, use previewUrl
         else if (currentTrack.previewUrl) {
-          url = currentTrack.previewUrl;
-          console.log(`Using preview URL as fallback: ${url}`);
+          sourcePath = currentTrack.previewUrl;
+          console.log(`Using preview URL: ${sourcePath}`);
         } else {
           console.error("No valid source found for track:", currentTrack);
           setError("No valid audio source found");
@@ -91,6 +81,10 @@ export const AudioPlayer = () => {
           loadingRef.current = false;
           return;
         }
+
+        // Create a blob URL for the audio file
+        const url = await createAudioUrl(sourcePath);
+        console.log(`Created audio URL: ${url}`);
 
         // Set album art if available
         if (currentTrack.imageUrl) {
@@ -136,19 +130,21 @@ export const AudioPlayer = () => {
     // Clean up previous blob URL when track changes
     return () => {
       if (audioUrl && audioUrl.startsWith("blob:")) {
-        // Always revoke blob URLs we created in this component
-        // This is safe because we create a new blob URL each time
-        try {
+        // Don't revoke URLs that might be needed for imported files
+        // Only revoke URLs that we created in this component
+        if (!currentTrack || audioUrl !== currentTrack.previewUrl) {
           URL.revokeObjectURL(audioUrl);
-          console.log(`Revoked blob URL: ${audioUrl}`);
-        } catch (e) {
-          console.error(`Error revoking blob URL: ${e.message}`);
         }
       }
 
       // Cancel any ongoing animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+
+      // Clear time update timeout
+      if (timeUpdateRef.current) {
+        clearTimeout(timeUpdateRef.current);
       }
     };
   }, [currentTrack]);
@@ -221,7 +217,7 @@ export const AudioPlayer = () => {
     audioRef.current.volume = volume;
   }, [volume]);
 
-  // Handle seeking
+  // Handle seeking - improved to prevent excessive updates
   useEffect(() => {
     if (!audioRef.current || !audioRef.current.duration) return;
 
@@ -231,10 +227,18 @@ export const AudioPlayer = () => {
     }
   }, [currentTime]);
 
-  // Event handlers
+  // Event handlers - throttled time updates to prevent excessive state changes
   const handleTimeUpdate = useCallback(() => {
     if (!audioRef.current) return;
-    setCurrentTime(audioRef.current.currentTime);
+
+    // Throttle time updates to prevent excessive state changes
+    if (timeUpdateRef.current) {
+      clearTimeout(timeUpdateRef.current);
+    }
+
+    timeUpdateRef.current = setTimeout(() => {
+      setCurrentTime(audioRef.current.currentTime);
+    }, 100); // Update every 100ms instead of every frame
   }, [setCurrentTime]);
 
   const handleDurationChange = useCallback(() => {
@@ -242,7 +246,10 @@ export const AudioPlayer = () => {
     setDuration(audioRef.current.duration || 0);
   }, [setDuration]);
 
+  // Improved track ending handling to prevent loops
   const handleEnded = useCallback(() => {
+    console.log("Track ended");
+
     if (repeat) {
       // If repeat is enabled, restart the current track
       if (audioRef.current) {
@@ -253,20 +260,39 @@ export const AudioPlayer = () => {
       }
     } else {
       // Otherwise, move to the next track
-      nextTrack();
+      // Add a small delay to prevent rapid-fire track changes
+      setTimeout(() => {
+        nextTrack();
+      }, 100);
     }
   }, [repeat, nextTrack]);
 
-  const handleError = useCallback((e) => {
-    console.error("Audio playback error:", e);
-    setError(
-      `Audio playback error: ${e.target.error?.message || "Unknown error"}`
-    );
+  const handleError = useCallback(
+    (e) => {
+      console.error("Audio playback error:", e);
+      const errorMessage = `Audio playback error: ${
+        e.target.error?.message || "Unknown error"
+      }`;
+      setError(errorMessage);
 
-    // Don't automatically move to the next track to prevent endless loops
-    // Just log the error and let the user manually try another track
-    console.log("Audio error occurred, manual intervention required");
-  }, []);
+      // Show toast notification
+      if (window.showToast) {
+        window.showToast(
+          "Failed to play audio. Skipping to next track...",
+          "error",
+          3000
+        );
+      }
+
+      // Try to recover by moving to the next track, but only if not already loading
+      if (!loadingRef.current) {
+        setTimeout(() => {
+          nextTrack();
+        }, 2000);
+      }
+    },
+    [nextTrack]
+  );
 
   return (
     <div style={{ display: "none" }}>

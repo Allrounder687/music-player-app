@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 
 const MusicContext = createContext();
 
@@ -89,23 +96,6 @@ const initialState = {
 function musicReducer(state, action) {
   switch (action.type) {
     case "PLAY_TRACK":
-      // Add a safety check to prevent endless loops
-      const lastTrackId = state.currentTrack?.id;
-      const lastTrackTime = Date.now();
-
-      // If we've tried to play the same track multiple times in quick succession, stop
-      if (
-        state._lastTrackChange &&
-        state._lastTrackId === action.track.id &&
-        lastTrackTime - state._lastTrackChange < 2000
-      ) {
-        console.warn("Preventing rapid track changes - possible loop detected");
-        return {
-          ...state,
-          isPlaying: false, // Stop playback to break the loop
-        };
-      }
-
       // Find the track index in the queue if it exists
       const trackIndex = state.queue.findIndex((t) => t.id === action.track.id);
 
@@ -128,9 +118,6 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20), // Keep only last 20 tracks
           },
-          // Track last change to prevent loops
-          _lastTrackId: action.track.id,
-          _lastTrackChange: Date.now(),
         };
       } else {
         // Track not in queue, add it
@@ -152,9 +139,6 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20), // Keep only last 20 tracks
           },
-          // Track last change to prevent loops
-          _lastTrackId: action.track.id,
-          _lastTrackChange: Date.now(),
         };
       }
 
@@ -182,23 +166,6 @@ function musicReducer(state, action) {
 
     case "NEXT_TRACK": {
       if (state.queue.length === 0) return state;
-
-      // Add a safety check to prevent endless loops
-      const lastTrackId = state.currentTrack?.id;
-      const lastTrackTime = Date.now();
-
-      // If we've tried to play the same track multiple times in quick succession, stop
-      if (
-        state._lastTrackChange &&
-        state._lastTrackId === lastTrackId &&
-        lastTrackTime - state._lastTrackChange < 2000
-      ) {
-        console.warn("Preventing rapid track changes - possible loop detected");
-        return {
-          ...state,
-          isPlaying: false, // Stop playback to break the loop
-        };
-      }
 
       // If shuffle is on, pick a random track
       if (state.shuffle) {
@@ -236,9 +203,6 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20),
           },
-          // Track last change to prevent loops
-          _lastTrackId: state.queue[nextIndex].id,
-          _lastTrackChange: Date.now(),
         };
       }
 
@@ -261,9 +225,6 @@ function musicReducer(state, action) {
             ),
           ].slice(0, 20),
         },
-        // Track last change to prevent loops
-        _lastTrackId: state.queue[nextIndex].id,
-        _lastTrackChange: Date.now(),
       };
     }
 
@@ -546,22 +507,20 @@ export const MusicProvider = ({ children }) => {
 
   const [state, dispatch] = useReducer(musicReducer, loadInitialState());
 
-  // Save state to localStorage when it changes
-  useEffect(() => {
+  // Memoize the state values that are used for localStorage to prevent unnecessary saves
+  const persistentState = useMemo(() => {
     // Extract custom tracks (non-sample tracks)
     const customTracks = state.tracks.filter(
-      (track) => !track.previewUrl.startsWith("/audio/")
+      (track) => !track.previewUrl?.startsWith("/audio/")
     );
 
-    const stateToSave = {
+    return {
       volume: state.volume,
       playlists: state.playlists,
       repeat: state.repeat,
       shuffle: state.shuffle,
       customTracks: customTracks,
     };
-
-    localStorage.setItem("musicPlayerState", JSON.stringify(stateToSave));
   }, [
     state.volume,
     state.playlists,
@@ -570,34 +529,49 @@ export const MusicProvider = ({ children }) => {
     state.tracks,
   ]);
 
-  // Helper function to find a track by ID
-  const getTrackById = (trackId) => {
-    return state.tracks.find((track) => track.id === trackId);
-  };
+  // Save state to localStorage when persistent values change
+  useEffect(() => {
+    try {
+      localStorage.setItem("musicPlayerState", JSON.stringify(persistentState));
+    } catch (error) {
+      console.error("Failed to save state to localStorage:", error);
+    }
+  }, [persistentState]);
 
-  // Get all favorite tracks as objects
-  const getFavoriteTracks = () => {
+  // Helper function to find a track by ID - memoized to prevent unnecessary re-renders
+  const getTrackById = useCallback(
+    (trackId) => {
+      return state.tracks.find((track) => track.id === trackId);
+    },
+    [state.tracks]
+  );
+
+  // Get all favorite tracks as objects - memoized
+  const getFavoriteTracks = useCallback(() => {
     return state.playlists.favorites
       .map((id) => getTrackById(id))
       .filter(Boolean);
-  };
+  }, [state.playlists.favorites, getTrackById]);
 
-  // Get recently played tracks as objects
-  const getRecentlyPlayedTracks = () => {
+  // Get recently played tracks as objects - memoized
+  const getRecentlyPlayedTracks = useCallback(() => {
     return state.playlists.recentlyPlayed
       .map((id) => getTrackById(id))
       .filter(Boolean);
-  };
+  }, [state.playlists.recentlyPlayed, getTrackById]);
 
-  // Get tracks for a specific playlist
-  const getPlaylistTracks = (playlistId) => {
-    const playlist = state.playlists.custom[playlistId];
-    if (!playlist) return [];
-    return playlist.tracks.map((id) => getTrackById(id)).filter(Boolean);
-  };
+  // Get tracks for a specific playlist - memoized
+  const getPlaylistTracks = useCallback(
+    (playlistId) => {
+      const playlist = state.playlists.custom[playlistId];
+      if (!playlist) return [];
+      return playlist.tracks.map((id) => getTrackById(id)).filter(Boolean);
+    },
+    [state.playlists.custom, getTrackById]
+  );
 
-  // Get all playlists
-  const getAllPlaylists = () => {
+  // Get all playlists - memoized
+  const getAllPlaylists = useCallback(() => {
     return Object.entries(state.playlists.custom).map(([id, playlist]) => ({
       id,
       name: playlist.name,
@@ -606,53 +580,155 @@ export const MusicProvider = ({ children }) => {
         .map((trackId) => getTrackById(trackId))
         .filter(Boolean),
     }));
-  };
+  }, [state.playlists.custom, getTrackById]);
 
-  const value = {
-    ...state,
-    playTrack: (track) => dispatch({ type: "PLAY_TRACK", track }),
-    togglePlayback: () => dispatch({ type: "TOGGLE_PLAYBACK" }),
-    setVolume: (volume) => dispatch({ type: "SET_VOLUME", volume }),
-    setCurrentTime: (time) => dispatch({ type: "SET_CURRENT_TIME", time }),
-    setDuration: (duration) => dispatch({ type: "SET_DURATION", duration }),
-    nextTrack: () => dispatch({ type: "NEXT_TRACK" }),
-    prevTrack: () => dispatch({ type: "PREV_TRACK" }),
-    setQueue: (tracks, autoplay = true) =>
-      dispatch({ type: "SET_QUEUE", tracks, autoplay }),
-    toggleFavorite: (trackId) => dispatch({ type: "TOGGLE_FAVORITE", trackId }),
-    toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
-    toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
-    setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
-    createPlaylist: (name, tracks = []) => {
-      const playlistId = `playlist-${Date.now()}`;
-      dispatch({
-        type: "CREATE_PLAYLIST",
-        playlistId,
-        name,
-        tracks,
-      });
-      return playlistId;
-    },
-    deletePlaylist: (playlistId) =>
-      dispatch({ type: "DELETE_PLAYLIST", playlistId }),
-    addToPlaylist: (playlistId, trackIds) =>
-      dispatch({
-        type: "ADD_TO_PLAYLIST",
-        playlistId,
-        trackIds: Array.isArray(trackIds) ? trackIds : [trackIds],
-      }),
-    removeFromPlaylist: (playlistId, trackIds) =>
-      dispatch({
-        type: "REMOVE_FROM_PLAYLIST",
-        playlistId,
-        trackIds: Array.isArray(trackIds) ? trackIds : [trackIds],
-      }),
-    getTrackById,
-    getFavoriteTracks,
-    getRecentlyPlayedTracks,
-    getPlaylistTracks,
-    getAllPlaylists,
-  };
+  // Memoized action creators to prevent unnecessary re-renders
+  const actions = useMemo(
+    () => ({
+      playTrack: (track) => {
+        dispatch({ type: "PLAY_TRACK", track });
+        // Show toast notification
+        if (window.showToast) {
+          window.showToast(`Now playing: ${track.title}`, "success", 2000);
+        }
+      },
+      togglePlayback: () => dispatch({ type: "TOGGLE_PLAYBACK" }),
+      setVolume: (volume) => dispatch({ type: "SET_VOLUME", volume }),
+      setCurrentTime: (time) => dispatch({ type: "SET_CURRENT_TIME", time }),
+      setDuration: (duration) => dispatch({ type: "SET_DURATION", duration }),
+      nextTrack: () => dispatch({ type: "NEXT_TRACK" }),
+      prevTrack: () => dispatch({ type: "PREV_TRACK" }),
+      setQueue: (tracks, autoplay = true) => {
+        dispatch({ type: "SET_QUEUE", tracks, autoplay });
+        if (window.showToast && tracks.length > 0) {
+          window.showToast(
+            `Queue updated with ${tracks.length} tracks`,
+            "info",
+            2000
+          );
+        }
+      },
+      toggleFavorite: (trackId) => {
+        const track = state.tracks.find((t) => t.id === trackId);
+        const isFavorite = state.playlists.favorites.includes(trackId);
+        dispatch({ type: "TOGGLE_FAVORITE", trackId });
+
+        if (window.showToast && track) {
+          window.showToast(
+            `${track.title} ${
+              isFavorite ? "removed from" : "added to"
+            } favorites`,
+            isFavorite ? "info" : "success",
+            2000
+          );
+        }
+      },
+      toggleRepeat: () => {
+        dispatch({ type: "TOGGLE_REPEAT" });
+        if (window.showToast) {
+          window.showToast(
+            `Repeat ${state.repeat ? "off" : "on"}`,
+            "info",
+            1500
+          );
+        }
+      },
+      toggleShuffle: () => {
+        dispatch({ type: "TOGGLE_SHUFFLE" });
+        if (window.showToast) {
+          window.showToast(
+            `Shuffle ${state.shuffle ? "off" : "on"}`,
+            "info",
+            1500
+          );
+        }
+      },
+      setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
+      createPlaylist: (name, tracks = []) => {
+        const playlistId = `playlist-${Date.now()}`;
+        dispatch({
+          type: "CREATE_PLAYLIST",
+          playlistId,
+          name,
+          tracks,
+        });
+        if (window.showToast) {
+          window.showToast(`Playlist "${name}" created`, "success", 2000);
+        }
+        return playlistId;
+      },
+      deletePlaylist: (playlistId) => {
+        const playlist = state.playlists.custom[playlistId];
+        dispatch({ type: "DELETE_PLAYLIST", playlistId });
+        if (window.showToast && playlist) {
+          window.showToast(`Playlist "${playlist.name}" deleted`, "info", 2000);
+        }
+      },
+      addToPlaylist: (playlistId, trackIds) => {
+        const playlist = state.playlists.custom[playlistId];
+        dispatch({
+          type: "ADD_TO_PLAYLIST",
+          playlistId,
+          trackIds: Array.isArray(trackIds) ? trackIds : [trackIds],
+        });
+        if (window.showToast && playlist) {
+          const count = Array.isArray(trackIds) ? trackIds.length : 1;
+          window.showToast(
+            `${count} track${count > 1 ? "s" : ""} added to "${playlist.name}"`,
+            "success",
+            2000
+          );
+        }
+      },
+      removeFromPlaylist: (playlistId, trackIds) => {
+        const playlist = state.playlists.custom[playlistId];
+        dispatch({
+          type: "REMOVE_FROM_PLAYLIST",
+          playlistId,
+          trackIds: Array.isArray(trackIds) ? trackIds : [trackIds],
+        });
+        if (window.showToast && playlist) {
+          const count = Array.isArray(trackIds) ? trackIds.length : 1;
+          window.showToast(
+            `${count} track${count > 1 ? "s" : ""} removed from "${
+              playlist.name
+            }"`,
+            "info",
+            2000
+          );
+        }
+      },
+    }),
+    [
+      state.tracks,
+      state.playlists.favorites,
+      state.playlists.custom,
+      state.repeat,
+      state.shuffle,
+    ]
+  );
+
+  // Memoize the complete context value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      ...state,
+      ...actions,
+      getTrackById,
+      getFavoriteTracks,
+      getRecentlyPlayedTracks,
+      getPlaylistTracks,
+      getAllPlaylists,
+    }),
+    [
+      state,
+      actions,
+      getTrackById,
+      getFavoriteTracks,
+      getRecentlyPlayedTracks,
+      getPlaylistTracks,
+      getAllPlaylists,
+    ]
+  );
 
   return (
     <MusicContext.Provider value={value}>{children}</MusicContext.Provider>
