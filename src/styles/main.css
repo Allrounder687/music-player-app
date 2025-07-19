@@ -1,0 +1,194 @@
+/* Import Tailwind directives */
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+@import "./snake.css";
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937; /* bg-gray-800 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563; /* bg-gray-600 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* bg-gray-500 */
+}
+
+/* Custom styles */
+/* Base styles */
+:root {
+  /* Default theme */
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --accent-color: #8b5cf6;
+  --accent-color-light: #a78bfa;
+  --accent-color-dark: #6d28d9;
+  --border-color: #374151;
+}
+
+/* Royal Dark Blue theme */
+.theme-royalBlue {
+  --bg-primary: #0c1b44;
+  --bg-secondary: #0f2257;
+  --bg-tertiary: #1a3a8f;
+  --text-primary: #ffffff;
+  --text-secondary: #e0e7ff;
+  --text-muted: #c7d2fe;
+  --accent-color: #2563eb;
+  --accent-color-light: #3b82f6;
+  --accent-color-dark: #1d4ed8;
+  --border-color: #1e3a8a;
+}
+
+/* Crimson Desert theme */
+.theme-crimsonDesert {
+  --bg-primary: #451a03;
+  --bg-secondary: #78350f;
+  --bg-tertiary: #92400e;
+  --text-primary: #ffffff;
+  --text-secondary: #fef3c7;
+  --text-muted: #fde68a;
+  --accent-color: #dc2626;
+  --accent-color-light: #ef4444;
+  --accent-color-dark: #b91c1c;
+  --border-color: #92400e;
+}
+
+/* Black theme */
+.theme-black {
+  --bg-primary: #000000;
+  --bg-secondary: #030712;
+  --bg-tertiary: #111827;
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #6b7280;
+  --accent-color: #9ca3af;
+  --accent-color-light: #d1d5db;
+  --accent-color-dark: #6b7280;
+  --border-color: #1f2937;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  /* Standard CSS properties */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+
+  /* Tailwind classes */
+  @apply font-sans antialiased text-white;
+}
+
+/* Custom transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom utility classes */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* Standard property */
+  line-clamp: 2;
+  /* For Firefox */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Animation for playing state */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Electron window drag region */
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
+}
+/* Snake Seekbar styles */
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 4px var(--accent-color));
+}
+
+@keyframes snake-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px var(--accent-color));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px var(--accent-color));
+    transform: scale(1.1);
+  }
+}
+
+.snake-animate {
+  animation: snake-pulse 2s ease-in-out infinite;
+}
+
+/* Theme-specific glow effects */
+.theme-royalBlue .drop-shadow-glow {
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.7));
+}
+
+.theme-crimsonDesert .drop-shadow-glow {
+  filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.7));
+}
+
+.theme-black .drop-shadow-glow {
+  filter: drop-shadow(0 0 4px rgba(156, 163, 175, 0.7));
+}

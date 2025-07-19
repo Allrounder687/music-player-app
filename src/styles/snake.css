@@ -1,0 +1,45 @@
+/* Snake Seekbar Animations */
+.snake-head {
+  animation: snakeHeadPulse 2s infinite;
+  transform-origin: center;
+}
+
+@keyframes snakeHeadPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.wave-path {
+  transition: stroke 0.3s ease;
+}
+
+.wave-path.active {
+  filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.7));
+}
+
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.7));
+}
+
+/* Theme-specific glow effects */
+.theme-royal-blue .drop-shadow-glow,
+.theme-royal-blue .wave-path.active {
+  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.7));
+}
+
+.theme-crimson-desert .drop-shadow-glow,
+.theme-crimson-desert .wave-path.active {
+  filter: drop-shadow(0 0 3px rgba(220, 38, 38, 0.7));
+}
+
+.theme-black .drop-shadow-glow,
+.theme-black .wave-path.active {
+  filter: drop-shadow(0 0 3px rgba(156, 163, 175, 0.7));
+}
