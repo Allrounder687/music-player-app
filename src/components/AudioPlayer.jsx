@@ -49,25 +49,41 @@ export const AudioPlayer = () => {
         console.log("Current track:", currentTrack);
 
         // Determine the source for the audio
-        let sourcePath;
+        let url;
 
-        // For imported files, the previewUrl might already be a blob URL
-        if (
+        // If we have the actual File object, use it directly
+        if (currentTrack.file instanceof File) {
+          console.log(`Using File object directly: ${currentTrack.file.name}`);
+          url = URL.createObjectURL(currentTrack.file);
+          console.log(`Created new blob URL from File: ${url}`);
+        }
+        // For sample files with relative paths
+        else if (
           currentTrack.previewUrl &&
-          currentTrack.previewUrl.startsWith("blob:")
+          currentTrack.previewUrl.startsWith("/")
         ) {
-          sourcePath = currentTrack.previewUrl;
-          console.log(`Using existing blob URL: ${sourcePath}`);
+          url = currentTrack.previewUrl;
+          console.log(`Using sample file path: ${url}`);
+        }
+        // For streaming URLs
+        else if (
+          currentTrack.previewUrl &&
+          (currentTrack.previewUrl.startsWith("http://") ||
+            currentTrack.previewUrl.startsWith("https://"))
+        ) {
+          url = currentTrack.previewUrl;
+          console.log(`Using streaming URL: ${url}`);
         }
         // For local files, use path or filePath
         else if (currentTrack.path || currentTrack.filePath) {
-          sourcePath = currentTrack.path || currentTrack.filePath;
-          console.log(`Using file path: ${sourcePath}`);
+          const sourcePath = currentTrack.path || currentTrack.filePath;
+          url = await createAudioUrl(sourcePath);
+          console.log(`Created audio URL from path: ${url}`);
         }
-        // For streaming URLs, use previewUrl
+        // For any other case, try the previewUrl
         else if (currentTrack.previewUrl) {
-          sourcePath = currentTrack.previewUrl;
-          console.log(`Using preview URL: ${sourcePath}`);
+          url = currentTrack.previewUrl;
+          console.log(`Using preview URL as fallback: ${url}`);
         } else {
           console.error("No valid source found for track:", currentTrack);
           setError("No valid audio source found");
@@ -75,10 +91,6 @@ export const AudioPlayer = () => {
           loadingRef.current = false;
           return;
         }
-
-        // Create a blob URL for the audio file
-        const url = await createAudioUrl(sourcePath);
-        console.log(`Created audio URL: ${url}`);
 
         // Set album art if available
         if (currentTrack.imageUrl) {
@@ -124,10 +136,13 @@ export const AudioPlayer = () => {
     // Clean up previous blob URL when track changes
     return () => {
       if (audioUrl && audioUrl.startsWith("blob:")) {
-        // Don't revoke URLs that might be needed for imported files
-        // Only revoke URLs that we created in this component
-        if (!currentTrack || audioUrl !== currentTrack.previewUrl) {
+        // Always revoke blob URLs we created in this component
+        // This is safe because we create a new blob URL each time
+        try {
           URL.revokeObjectURL(audioUrl);
+          console.log(`Revoked blob URL: ${audioUrl}`);
+        } catch (e) {
+          console.error(`Error revoking blob URL: ${e.message}`);
         }
       }
 
@@ -242,22 +257,16 @@ export const AudioPlayer = () => {
     }
   }, [repeat, nextTrack]);
 
-  const handleError = useCallback(
-    (e) => {
-      console.error("Audio playback error:", e);
-      setError(
-        `Audio playback error: ${e.target.error?.message || "Unknown error"}`
-      );
+  const handleError = useCallback((e) => {
+    console.error("Audio playback error:", e);
+    setError(
+      `Audio playback error: ${e.target.error?.message || "Unknown error"}`
+    );
 
-      // Try to recover by moving to the next track, but only if not already loading
-      if (!loadingRef.current) {
-        setTimeout(() => {
-          nextTrack();
-        }, 2000);
-      }
-    },
-    [nextTrack]
-  );
+    // Don't automatically move to the next track to prevent endless loops
+    // Just log the error and let the user manually try another track
+    console.log("Audio error occurred, manual intervention required");
+  }, []);
 
   return (
     <div style={{ display: "none" }}>

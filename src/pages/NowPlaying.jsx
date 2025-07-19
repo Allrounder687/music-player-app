@@ -75,11 +75,16 @@ export const NowPlaying = () => {
         {/* Album Art */}
         <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 mb-4 md:mb-0 md:mr-6">
           <div className="aspect-square bg-gray-700 rounded-lg overflow-hidden shadow-lg">
-            {currentTrack?.imageUrl ? (
+            {currentTrack?.imageUrl &&
+            !currentTrack.imageUrl.includes("album-placeholder") ? (
               <img
                 src={currentTrack.imageUrl}
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/images/album-placeholder.svg";
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 to-gray-800">

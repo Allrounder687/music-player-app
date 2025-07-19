@@ -89,6 +89,23 @@ const initialState = {
 function musicReducer(state, action) {
   switch (action.type) {
     case "PLAY_TRACK":
+      // Add a safety check to prevent endless loops
+      const lastTrackId = state.currentTrack?.id;
+      const lastTrackTime = Date.now();
+
+      // If we've tried to play the same track multiple times in quick succession, stop
+      if (
+        state._lastTrackChange &&
+        state._lastTrackId === action.track.id &&
+        lastTrackTime - state._lastTrackChange < 2000
+      ) {
+        console.warn("Preventing rapid track changes - possible loop detected");
+        return {
+          ...state,
+          isPlaying: false, // Stop playback to break the loop
+        };
+      }
+
       // Find the track index in the queue if it exists
       const trackIndex = state.queue.findIndex((t) => t.id === action.track.id);
 
@@ -111,6 +128,9 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20), // Keep only last 20 tracks
           },
+          // Track last change to prevent loops
+          _lastTrackId: action.track.id,
+          _lastTrackChange: Date.now(),
         };
       } else {
         // Track not in queue, add it
@@ -132,6 +152,9 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20), // Keep only last 20 tracks
           },
+          // Track last change to prevent loops
+          _lastTrackId: action.track.id,
+          _lastTrackChange: Date.now(),
         };
       }
 
@@ -159,6 +182,23 @@ function musicReducer(state, action) {
 
     case "NEXT_TRACK": {
       if (state.queue.length === 0) return state;
+
+      // Add a safety check to prevent endless loops
+      const lastTrackId = state.currentTrack?.id;
+      const lastTrackTime = Date.now();
+
+      // If we've tried to play the same track multiple times in quick succession, stop
+      if (
+        state._lastTrackChange &&
+        state._lastTrackId === lastTrackId &&
+        lastTrackTime - state._lastTrackChange < 2000
+      ) {
+        console.warn("Preventing rapid track changes - possible loop detected");
+        return {
+          ...state,
+          isPlaying: false, // Stop playback to break the loop
+        };
+      }
 
       // If shuffle is on, pick a random track
       if (state.shuffle) {
@@ -196,6 +236,9 @@ function musicReducer(state, action) {
               ),
             ].slice(0, 20),
           },
+          // Track last change to prevent loops
+          _lastTrackId: state.queue[nextIndex].id,
+          _lastTrackChange: Date.now(),
         };
       }
 
@@ -218,6 +261,9 @@ function musicReducer(state, action) {
             ),
           ].slice(0, 20),
         },
+        // Track last change to prevent loops
+        _lastTrackId: state.queue[nextIndex].id,
+        _lastTrackChange: Date.now(),
       };
     }
 

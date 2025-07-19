@@ -78,15 +78,18 @@ export const parseAudioMetadata = async (file) => {
   }
 
   return new Promise((resolve) => {
-    // Create a temporary URL for the file
-    const url = URL.createObjectURL(file);
-    console.log(`Processing file: ${file.name}, URL: ${url}`);
+    // Don't create a blob URL here, just use the file directly
+    console.log(`Processing file: ${file.name}`);
 
     // Store the original file object to ensure it's accessible for playback
     const fileObject = file;
 
     // Create an audio element to get duration
     const audio = new Audio();
+
+    // Create a temporary URL just for metadata extraction
+    const tempUrl = URL.createObjectURL(file);
+    audio.src = tempUrl;
 
     // Set up event listeners before setting src
     audio.addEventListener("loadedmetadata", () => {
@@ -108,14 +111,18 @@ export const parseAudioMetadata = async (file) => {
         album: "Unknown Album",
         duration: audio.duration || 0, // Default to 0 if duration is NaN
         imageUrl: null,
-        previewUrl: url, // Store the blob URL directly
+        // Don't store the blob URL, we'll create it when needed
+        previewUrl: null,
         filePath: file.path || file.webkitRelativePath || file.name,
         fileType: file.type || `audio/${filename.split(".").pop()}`, // Fallback type based on extension
         fileSize: file.size,
         dateAdded: new Date().toISOString(),
-        // Store the file object for direct access
+        // Store the file object for direct access - this is the key part
         file: fileObject,
       };
+
+      // Revoke the temporary URL
+      URL.revokeObjectURL(tempUrl);
 
       resolve(track);
     });
@@ -123,8 +130,9 @@ export const parseAudioMetadata = async (file) => {
     // Handle errors
     audio.addEventListener("error", (e) => {
       console.error(`Error loading audio file: ${file.name}`, e.target.error);
-      // Don't revoke the URL as we need it for playback
-      // URL.revokeObjectURL(url);
+
+      // Revoke the temporary URL
+      URL.revokeObjectURL(tempUrl);
 
       // Even if we can't load metadata, still create a basic track
       const filename = file.name;
@@ -140,7 +148,7 @@ export const parseAudioMetadata = async (file) => {
         album: "Unknown Album",
         duration: 0, // Default duration
         imageUrl: null,
-        previewUrl: url, // Keep the URL for playback
+        previewUrl: null, // Don't store a URL, we'll create it when needed
         filePath: file.path || file.webkitRelativePath || file.name,
         fileType: file.type || `audio/${filename.split(".").pop()}`,
         fileSize: file.size,
@@ -158,8 +166,9 @@ export const parseAudioMetadata = async (file) => {
     // Set a timeout in case the audio element gets stuck
     const timeout = setTimeout(() => {
       console.warn(`Timeout loading metadata for: ${file.name}`);
-      // Don't revoke the URL as we need it for playback
-      // URL.revokeObjectURL(url);
+
+      // Revoke the temporary URL
+      URL.revokeObjectURL(tempUrl);
 
       // Create a basic track with default values
       const filename = file.name;
@@ -174,7 +183,7 @@ export const parseAudioMetadata = async (file) => {
         album: "Unknown Album",
         duration: 0,
         imageUrl: null,
-        previewUrl: url, // Keep the URL for playback
+        previewUrl: null, // Don't store a URL, we'll create it when needed
         filePath: file.path || file.webkitRelativePath || file.name,
         fileType: file.type || `audio/${filename.split(".").pop()}`,
         fileSize: file.size,

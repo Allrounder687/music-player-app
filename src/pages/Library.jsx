@@ -215,11 +215,16 @@ export const Library = () => {
               } transition-colors cursor-pointer group`}
             >
               <div className="relative" onClick={() => playTrack(track)}>
-                {track.imageUrl ? (
+                {track.imageUrl &&
+                !track.imageUrl.includes("album-placeholder") ? (
                   <img
                     src={track.imageUrl}
                     alt={track.title}
                     className="w-full aspect-square object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/images/album-placeholder.svg";
+                    }}
                   />
                 ) : (
                   <div
