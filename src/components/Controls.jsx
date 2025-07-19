@@ -165,7 +165,7 @@ export const Controls = ({
           >
             {formatTime(currentTime)}
           </span>
-          <div className="flex-1 mx-2">
+          <div className="flex-1 mx-2 overflow-hidden">
             <SnakeSeekbar
               currentTime={currentTime}
               duration={duration}

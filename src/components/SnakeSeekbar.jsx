@@ -173,78 +173,88 @@ export const SnakeSeekbar = ({
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
     };
   }, [animateWave]);
 
   // Handle mouse events
-  const handleMouseDown = (e) => {
+  const handleMouseDown = useCallback((e) => {
     setIsDragging(true);
     updateSeekPosition(e);
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-  };
+  }, []);
 
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      updateSeekPosition(e);
-    } else {
-      updateHoverPosition(e);
-    }
-  };
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (isDragging) {
+        updateSeekPosition(e);
+      } else {
+        updateHoverPosition(e);
+      }
+    },
+    [isDragging]
+  );
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
-  };
+  }, []);
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     setIsHovering(true);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setIsHovering(false);
-  };
+  }, []);
 
   // Update the seek position based on mouse position
-  const updateSeekPosition = (e) => {
-    if (!seekbarRef.current) return;
+  const updateSeekPosition = useCallback(
+    (e) => {
+      if (!seekbarRef.current) return;
 
-    const rect = seekbarRef.current.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
-    const newTime = percentage * duration;
+      const rect = seekbarRef.current.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      const newTime = percentage * duration;
 
-    updateWavePoints(percentage);
+      updateWavePoints(percentage);
 
-    if (onChange) {
-      onChange(newTime);
-    }
-  };
+      if (onChange) {
+        onChange(newTime);
+      }
+    },
+    [duration, onChange, updateWavePoints]
+  );
 
   // Update hover position for tooltip
-  const updateHoverPosition = (e) => {
-    if (!seekbarRef.current) return;
+  const updateHoverPosition = useCallback(
+    (e) => {
+      if (!seekbarRef.current) return;
 
-    const rect = seekbarRef.current.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
-    const hoverTime = percentage * duration;
+      const rect = seekbarRef.current.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      const hoverTime = percentage * duration;
 
-    setTooltipPosition({
-      x: offsetX,
-      time: hoverTime,
-    });
-  };
+      setTooltipPosition({
+        x: offsetX,
+        time: hoverTime,
+      });
+    },
+    [duration]
+  );
 
   // Format time for tooltip display
-  const formatTime = (seconds) => {
+  const formatTime = useCallback((seconds) => {
     if (isNaN(seconds)) return "0:00";
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
-  };
+  }, []);
 
   // Calculate progress percentage with safety checks
   const progress =
@@ -324,21 +334,20 @@ export const SnakeSeekbar = ({
 
   // Split wave points into active and inactive
   const activePoints = wavePoints.filter((p) => p.active);
-  const inactivePoints = wavePoints.filter((p) => !p.active);
 
   return (
     <div
       ref={seekbarRef}
-      className={`relative h-6 w-full cursor-pointer ${className}`}
+      className={`relative h-6 w-full cursor-pointer overflow-hidden ${className}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       {...props}
     >
-      {/* SVG for wave pattern */}
+      {/* SVG for wave pattern - contained within the seekbar */}
       <svg
-        className="w-full h-full"
+        className="w-full h-full absolute top-0 left-0"
         viewBox="0 0 100 16"
         preserveAspectRatio="none"
       >
@@ -348,7 +357,6 @@ export const SnakeSeekbar = ({
           stroke="rgba(255, 255, 255, 0.1)"
           strokeWidth="1"
           fill="none"
-          className="wave-path"
         />
 
         {/* Inactive wave path */}
@@ -357,7 +365,6 @@ export const SnakeSeekbar = ({
           stroke={getThemeColor(0.2, false)}
           strokeWidth={getStrokeWidth(false)}
           fill="none"
-          className="wave-path"
         />
 
         {/* Active wave path */}
@@ -366,7 +373,6 @@ export const SnakeSeekbar = ({
           stroke={getThemeColor(0.9, true)}
           strokeWidth={getStrokeWidth(true)}
           fill="none"
-          className="wave-path active"
           style={{
             filter: `drop-shadow(0 0 ${
               getGlowIntensity() * 3
@@ -375,23 +381,24 @@ export const SnakeSeekbar = ({
         />
 
         {/* Snake head */}
-        <g
-          transform={`translate(${headPosition.x}, ${
-            8 + headPosition.y
-          }) rotate(${headPosition.angle})`}
-          className="snake-head"
-          style={{
-            filter: `drop-shadow(0 0 ${
-              getGlowIntensity() * 3
-            }px ${getThemeColor(getGlowIntensity(), true)})`,
-          }}
-        >
-          {/* Main head shape */}
-          <path d="M 0,0 L 4,-1.5 Q 5,0 4,1.5 Z" fill={getThemeColor(1)} />
+        {headPosition.x > 0 && (
+          <g
+            transform={`translate(${headPosition.x}, ${
+              8 + headPosition.y
+            }) rotate(${headPosition.angle})`}
+            style={{
+              filter: `drop-shadow(0 0 ${
+                getGlowIntensity() * 3
+              }px ${getThemeColor(getGlowIntensity(), true)})`,
+            }}
+          >
+            {/* Main head shape */}
+            <path d="M 0,0 L 4,-1.5 Q 5,0 4,1.5 Z" fill={getThemeColor(1)} />
 
-          {/* Eye */}
-          <circle cx="2" cy="-0.5" r="0.5" fill="#ffffff" />
-        </g>
+            {/* Eye */}
+            <circle cx="2" cy="-0.5" r="0.5" fill="#ffffff" />
+          </g>
+        )}
       </svg>
 
       {/* Hover tooltip */}
