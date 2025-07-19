@@ -178,13 +178,9 @@ export const SnakeSeekbar = ({
     };
   }, [animateWave]);
 
-  // Handle mouse events
-  const handleMouseDown = useCallback((e) => {
-    setIsDragging(true);
-    updateSeekPosition(e);
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  }, []);
+  // Handle mouse events - using refs to avoid circular dependencies
+  const handleMouseMoveRef = useRef();
+  const handleMouseUpRef = useRef();
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -194,14 +190,28 @@ export const SnakeSeekbar = ({
         updateHoverPosition(e);
       }
     },
-    [isDragging]
+    [isDragging, updateSeekPosition, updateHoverPosition]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
+    document.removeEventListener("mousemove", handleMouseMoveRef.current);
+    document.removeEventListener("mouseup", handleMouseUpRef.current);
   }, []);
+
+  // Store the latest functions in refs
+  handleMouseMoveRef.current = handleMouseMove;
+  handleMouseUpRef.current = handleMouseUp;
+
+  const handleMouseDown = useCallback(
+    (e) => {
+      setIsDragging(true);
+      updateSeekPosition(e);
+      document.addEventListener("mousemove", handleMouseMoveRef.current);
+      document.addEventListener("mouseup", handleMouseUpRef.current);
+    },
+    [updateSeekPosition]
+  );
 
   const handleMouseEnter = useCallback(() => {
     setIsHovering(true);
@@ -214,13 +224,17 @@ export const SnakeSeekbar = ({
   // Update the seek position based on mouse position
   const updateSeekPosition = useCallback(
     (e) => {
-      if (!seekbarRef.current) return;
+      if (!seekbarRef.current || duration <= 0) return;
 
       const rect = seekbarRef.current.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
-      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      
+      // Ensure we're within bounds and calculate accurate percentage
+      const clampedOffsetX = Math.max(0, Math.min(offsetX, rect.width));
+      const percentage = clampedOffsetX / rect.width;
       const newTime = percentage * duration;
 
+      // Update wave points immediately for visual feedback
       updateWavePoints(percentage);
 
       if (onChange) {
@@ -233,15 +247,18 @@ export const SnakeSeekbar = ({
   // Update hover position for tooltip
   const updateHoverPosition = useCallback(
     (e) => {
-      if (!seekbarRef.current) return;
+      if (!seekbarRef.current || duration <= 0) return;
 
       const rect = seekbarRef.current.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
-      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      
+      // Ensure we're within bounds for tooltip positioning
+      const clampedOffsetX = Math.max(0, Math.min(offsetX, rect.width));
+      const percentage = clampedOffsetX / rect.width;
       const hoverTime = percentage * duration;
 
       setTooltipPosition({
-        x: offsetX,
+        x: clampedOffsetX,
         time: hoverTime,
       });
     },
