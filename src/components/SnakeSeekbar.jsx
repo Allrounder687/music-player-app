@@ -178,47 +178,18 @@ export const SnakeSeekbar = ({
     };
   }, [animateWave]);
 
-  // Handle mouse events
-  const handleMouseDown = useCallback((e) => {
-    setIsDragging(true);
-    updateSeekPosition(e);
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (isDragging) {
-        updateSeekPosition(e);
-      } else {
-        updateHoverPosition(e);
-      }
-    },
-    [isDragging]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  }, []);
-
-  const handleMouseEnter = useCallback(() => {
-    setIsHovering(true);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setIsHovering(false);
-  }, []);
+  // ------------------------------------------------------
+  // Seeking & Hover helpers (declare BEFORE handlers)
+  // ------------------------------------------------------
 
   // Update the seek position based on mouse position
   const updateSeekPosition = useCallback(
     (e) => {
-      if (!seekbarRef.current) return;
+      if (!seekbarRef.current || duration <= 0) return;
 
       const rect = seekbarRef.current.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      const clampedOffsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const percentage = clampedOffsetX / rect.width;
       const newTime = percentage * duration;
 
       updateWavePoints(percentage);
@@ -233,20 +204,61 @@ export const SnakeSeekbar = ({
   // Update hover position for tooltip
   const updateHoverPosition = useCallback(
     (e) => {
-      if (!seekbarRef.current) return;
+      if (!seekbarRef.current || duration <= 0) return;
 
       const rect = seekbarRef.current.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+      const clampedOffsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const percentage = clampedOffsetX / rect.width;
       const hoverTime = percentage * duration;
 
       setTooltipPosition({
-        x: offsetX,
+        x: clampedOffsetX,
         time: hoverTime,
       });
     },
     [duration]
   );
+
+  // ------------------------------------------------------
+  // Mouse event handlers (use refs to break circular deps)
+  // ------------------------------------------------------
+
+  const handleMouseMoveRef = useRef(null);
+  const handleMouseUpRef = useRef(null);
+
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (isDragging) {
+        updateSeekPosition(e);
+      } else {
+        updateHoverPosition(e);
+      }
+    },
+    [isDragging, updateSeekPosition, updateHoverPosition]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    document.removeEventListener("mousemove", handleMouseMoveRef.current);
+    document.removeEventListener("mouseup", handleMouseUpRef.current);
+  }, []);
+
+  // Keep refs in sync with latest callbacks
+  handleMouseMoveRef.current = handleMouseMove;
+  handleMouseUpRef.current = handleMouseUp;
+
+  const handleMouseDown = useCallback(
+    (e) => {
+      setIsDragging(true);
+      updateSeekPosition(e);
+      document.addEventListener("mousemove", handleMouseMoveRef.current);
+      document.addEventListener("mouseup", handleMouseUpRef.current);
+    },
+    [updateSeekPosition]
+  );
+
+  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const handleMouseLeave = useCallback(() => setIsHovering(false), []);
 
   // Format time for tooltip display
   const formatTime = useCallback((seconds) => {
