@@ -67,11 +67,16 @@ module.exports = {
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "slide-in": "slideIn 0.3s ease-out",
       },
       keyframes: {
         pulse: {
           "0%, 100%": { opacity: 1 },
           "50%": { opacity: 0.5 },
+        },
+        slideIn: {
+          "0%": { opacity: 0, transform: "translateX(100%)" },
+          "100%": { opacity: 1, transform: "translateX(0)" },
         },
       },
     },

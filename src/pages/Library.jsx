@@ -7,6 +7,8 @@ import {
   FaHeart,
   FaRegHeart,
   FaEllipsisH,
+  FaPlus,
+  FaTrash,
 } from "react-icons/fa";
 import { formatTime } from "../utils/audioUtils";
 
@@ -18,12 +20,15 @@ export const Library = () => {
     playlists,
     toggleFavorite,
     setQueue,
+    addToQueue,
+    deleteTrack,
   } = useMusic();
   const { theme } = useTheme();
   const [filter, setFilter] = useState("");
   const [sortBy, setSortBy] = useState("dateAdded"); // dateAdded, title, artist, album
   const [sortDirection, setSortDirection] = useState("desc"); // asc, desc
   const [view, setView] = useState("grid"); // grid, list
+  const [showDropdown, setShowDropdown] = useState(null);
 
   // Filter and sort tracks
   const filteredTracks = tracks
@@ -80,6 +85,28 @@ export const Library = () => {
       setSortDirection("asc");
     }
   };
+
+  const handleAddToQueue = (track) => {
+    addToQueue(track);
+    setShowDropdown(null);
+  };
+
+  const handleDeleteTrack = (track) => {
+    deleteTrack(track.id);
+    setShowDropdown(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowDropdown(null);
+    };
+
+    if (showDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showDropdown]);
 
   return (
     <div
@@ -253,7 +280,7 @@ export const Library = () => {
               </div>
               <div className="p-3">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3
                       className={`font-medium truncate text-${
                         theme?.colors?.text?.main || "white"
@@ -269,16 +296,56 @@ export const Library = () => {
                       {track.artist || "Unknown Artist"}
                     </p>
                   </div>
-                  <button
-                    onClick={() => toggleFavorite(track.id)}
-                    className="text-pink-500 hover:text-pink-400 transition-colors"
-                  >
-                    {playlists.favorites.includes(track.id) ? (
-                      <FaHeart />
-                    ) : (
-                      <FaRegHeart />
-                    )}
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(track.id);
+                      }}
+                      className="text-pink-500 hover:text-pink-400 transition-colors"
+                    >
+                      {playlists.favorites.includes(track.id) ? (
+                        <FaHeart />
+                      ) : (
+                        <FaRegHeart />
+                      )}
+                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDropdown(showDropdown === track.id ? null : track.id);
+                        }}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        <FaEllipsisH />
+                      </button>
+                      {showDropdown === track.id && (
+                        <div className="absolute right-0 top-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-2 w-40 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToQueue(track);
+                            }}
+                            className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <FaPlus className="w-3 h-3" />
+                            Add to Queue
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTrack(track);
+                            }}
+                            className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <FaTrash className="w-3 h-3" />
+                            Delete Track
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div
                   className={`mt-2 text-xs text-${
@@ -357,7 +424,7 @@ export const Library = () => {
                 currentTrack?.id === track.id
                   ? `bg-${theme?.colors?.background?.hover || "gray-700/50"}`
                   : ""
-              } cursor-pointer text-${theme?.colors?.text?.main || "white"}`}
+              } cursor-pointer text-${theme?.colors?.text?.main || "white"} group`}
             >
               <div className="col-span-1 flex items-center">
                 {currentTrack?.id === track.id ? (
@@ -420,6 +487,41 @@ export const Library = () => {
                     <FaRegHeart />
                   )}
                 </button>
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDropdown(showDropdown === track.id ? null : track.id);
+                    }}
+                    className="text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <FaEllipsisH />
+                  </button>
+                  {showDropdown === track.id && (
+                    <div className="absolute right-0 top-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-2 w-40 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToQueue(track);
+                        }}
+                        className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <FaPlus className="w-3 h-3" />
+                        Add to Queue
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTrack(track);
+                        }}
+                        className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <FaTrash className="w-3 h-3" />
+                        Delete Track
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

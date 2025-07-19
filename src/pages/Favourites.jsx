@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useMusic } from "../store/MusicContext";
-import { FaPlay, FaPause, FaHeart, FaEllipsisH } from "react-icons/fa";
+import { FaPlay, FaPause, FaHeart, FaEllipsisH, FaPlus, FaTrash } from "react-icons/fa";
 
 export const Favourites = () => {
   const {
@@ -10,7 +10,11 @@ export const Favourites = () => {
     toggleFavorite,
     getFavoriteTracks,
     setQueue,
+    addToQueue,
+    deleteTrack,
   } = useMusic();
+
+  const [showDropdown, setShowDropdown] = useState(null);
 
   const favoriteTracks = getFavoriteTracks();
 
@@ -23,6 +27,28 @@ export const Favourites = () => {
       setQueue(favoriteTracks);
     }
   };
+
+  const handleAddToQueue = (track) => {
+    addToQueue(track);
+    setShowDropdown(null);
+  };
+
+  const handleDeleteTrack = (track) => {
+    deleteTrack(track.id);
+    setShowDropdown(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowDropdown(null);
+    };
+
+    if (showDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showDropdown]);
 
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return "0:00";
@@ -124,12 +150,41 @@ export const Favourites = () => {
                       >
                         <FaHeart />
                       </button>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        <FaEllipsisH />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDropdown(showDropdown === track.id ? null : track.id);
+                          }}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <FaEllipsisH />
+                        </button>
+                        {showDropdown === track.id && (
+                          <div className="absolute right-0 top-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-2 w-40 z-10">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToQueue(track);
+                              }}
+                              className="w-full px-4 py-2 text-left text-gray-300 hover:bg-gray-700 flex items-center gap-2"
+                            >
+                              <FaPlus className="w-3 h-3" />
+                              Add to Queue
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTrack(track);
+                              }}
+                              className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2"
+                            >
+                              <FaTrash className="w-3 h-3" />
+                              Delete Track
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>

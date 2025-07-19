@@ -2,54 +2,8 @@ import React, { createContext, useContext, useReducer, useEffect } from "react";
 
 const MusicContext = createContext();
 
-// Sample tracks data with local resources
-const sampleTracks = [
-  {
-    id: "1",
-    title: "Bohemian Rhapsody",
-    artist: "Queen",
-    album: "A Night at the Opera",
-    duration: 355, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample1.mp3",
-  },
-  {
-    id: "2",
-    title: "Stairway to Heaven",
-    artist: "Led Zeppelin",
-    album: "Led Zeppelin IV",
-    duration: 482, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample2.mp3",
-  },
-  {
-    id: "3",
-    title: "Hotel California",
-    artist: "Eagles",
-    album: "Hotel California",
-    duration: 390, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample3.mp3",
-  },
-  {
-    id: "4",
-    title: "Sweet Child O' Mine",
-    artist: "Guns N' Roses",
-    album: "Appetite for Destruction",
-    duration: 356, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample1.mp3",
-  },
-  {
-    id: "5",
-    title: "Smells Like Teen Spirit",
-    artist: "Nirvana",
-    album: "Nevermind",
-    duration: 301, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample2.mp3",
-  },
-];
+// Empty initial tracks - no more placeholder tracks
+const sampleTracks = [];
 
 const initialState = {
   tracks: sampleTracks,
@@ -58,7 +12,7 @@ const initialState = {
   volume: 0.8,
   currentTime: 0,
   duration: 0,
-  queue: sampleTracks,
+  queue: [],
   currentTrackIndex: -1,
   repeat: false,
   shuffle: false,
@@ -71,19 +25,12 @@ const initialState = {
     timeData: [],
   },
   playlists: {
-    favorites: ["1", "3"], // Sample favorite tracks
+    favorites: [], // No sample favorites
     recentlyPlayed: [],
-    custom: {
-      workout: {
-        name: "Workout Mix",
-        tracks: ["2", "4", "5"],
-      },
-      chill: {
-        name: "Chill Vibes",
-        tracks: ["1", "3"],
-      },
-    },
+    custom: {},
   },
+  // Add toast notification state
+  toasts: [],
 };
 
 function musicReducer(state, action) {
@@ -315,21 +262,23 @@ function musicReducer(state, action) {
     case "SET_QUEUE":
       console.log("Setting queue with tracks:", action.tracks);
 
-      // Make sure we have valid tracks
       if (!action.tracks || action.tracks.length === 0) {
         console.warn("Attempted to set empty queue");
         return state;
       }
 
-      // Make sure tracks have all required properties, with more lenient validation for imported tracks
-      const validTracks = action.tracks.filter(
-        (track) =>
-          track &&
-          track.id &&
-          track.title &&
-          // Allow tracks with previewUrl or filePath (for imported local files)
-          (track.previewUrl || track.filePath)
-      );
+      // Filter out any invalid tracks
+      const validTracks = action.tracks.filter((track) => {
+        if (!track) {
+          console.warn("Null track found in queue");
+          return false;
+        }
+        if (!track.id) {
+          console.warn("Track without ID found:", track);
+          return false;
+        }
+        return true;
+      });
 
       if (validTracks.length === 0) {
         console.warn("No valid tracks in queue");
@@ -338,62 +287,24 @@ function musicReducer(state, action) {
 
       console.log("Valid tracks for queue:", validTracks);
 
-      // For imported tracks, add them to a new "Imported" playlist if they don't exist yet
+      // Get tracks that are not already in the global tracks list
+      const existingTrackIds = new Set(state.tracks.map((t) => t.id));
       const newTracks = validTracks.filter(
-        (track) => !state.tracks.some((t) => t.id === track.id)
+        (track) => !existingTrackIds.has(track.id)
       );
 
-      let updatedPlaylists = state.playlists;
-
-      // If we have new tracks from an import, add them to an "Imported" playlist
-      if (newTracks.length > 0 && !action.autoplay) {
-        // Check if "Imported" playlist exists, create it if not
-        const importedPlaylistId = "imported";
-        const hasImportedPlaylist =
-          state.playlists.custom && state.playlists.custom[importedPlaylistId];
-
-        if (hasImportedPlaylist) {
-          // Add to existing imported playlist
-          updatedPlaylists = {
+      // Update playlists to include new track IDs in recently played if autoplay is true
+      const updatedPlaylists = action.autoplay
+        ? {
             ...state.playlists,
-            custom: {
-              ...state.playlists.custom,
-              [importedPlaylistId]: {
-                ...state.playlists.custom[importedPlaylistId],
-                tracks: [
-                  ...state.playlists.custom[importedPlaylistId].tracks,
-                  ...newTracks.map((track) => track.id),
-                ],
-              },
-            },
-          };
-        } else {
-          // Create new imported playlist
-          updatedPlaylists = {
-            ...state.playlists,
-            custom: {
-              ...state.playlists.custom,
-              [importedPlaylistId]: {
-                name: "Imported Music",
-                tracks: newTracks.map((track) => track.id),
-              },
-            },
-          };
-        }
-      }
-
-      // Add to recently played if autoplay
-      if (action.autoplay) {
-        updatedPlaylists = {
-          ...updatedPlaylists,
-          recentlyPlayed: [
-            validTracks[0].id,
-            ...state.playlists.recentlyPlayed.filter(
-              (id) => id !== validTracks[0].id
-            ),
-          ].slice(0, 20),
-        };
-      }
+            recentlyPlayed: [
+              validTracks[0].id,
+              ...state.playlists.recentlyPlayed.filter(
+                (id) => id !== validTracks[0].id
+              ),
+            ].slice(0, 20),
+          }
+        : state.playlists;
 
       // Create a new state with the updated queue
       const newState = {
@@ -420,9 +331,120 @@ function musicReducer(state, action) {
 
       return newState;
 
+    case "ADD_TO_QUEUE":
+      const trackToAdd = action.track;
+      if (!trackToAdd || !trackToAdd.id) {
+        return {
+          ...state,
+          toasts: [...state.toasts, { id: Date.now(), message: "Invalid track", type: "error" }]
+        };
+      }
+
+      // Check if track is already in queue
+      const isInQueue = state.queue.some(t => t.id === trackToAdd.id);
+      if (isInQueue) {
+        return {
+          ...state,
+          toasts: [...state.toasts, { id: Date.now(), message: "Track already in queue", type: "info" }]
+        };
+      }
+
+      // Add track to end of queue
+      return {
+        ...state,
+        queue: [...state.queue, trackToAdd],
+        toasts: [...state.toasts, { id: Date.now(), message: `Added "${trackToAdd.title}" to queue`, type: "success" }]
+      };
+
+    case "REMOVE_FROM_QUEUE":
+      const indexToRemove = action.index;
+      if (indexToRemove < 0 || indexToRemove >= state.queue.length) {
+        return state;
+      }
+
+      const newQueue = state.queue.filter((_, index) => index !== indexToRemove);
+      let newCurrentTrackIndex = state.currentTrackIndex;
+      let newCurrentTrack = state.currentTrack;
+
+      // Adjust current track index if necessary
+      if (indexToRemove === state.currentTrackIndex) {
+        // If we removed the current track, stop playback
+        newCurrentTrack = null;
+        newCurrentTrackIndex = -1;
+      } else if (indexToRemove < state.currentTrackIndex) {
+        // If we removed a track before the current one, decrement index
+        newCurrentTrackIndex = state.currentTrackIndex - 1;
+      }
+
+      return {
+        ...state,
+        queue: newQueue,
+        currentTrackIndex: newCurrentTrackIndex,
+        currentTrack: newCurrentTrack,
+        isPlaying: newCurrentTrack ? state.isPlaying : false,
+        toasts: [...state.toasts, { id: Date.now(), message: "Removed from queue", type: "success" }]
+      };
+
+    case "DELETE_TRACK":
+      const trackIdToDelete = action.trackId;
+      
+      // Remove from tracks list
+      const newTracksList = state.tracks.filter(track => track.id !== trackIdToDelete);
+      
+      // Remove from queue
+      const newQueueAfterDelete = state.queue.filter(track => track.id !== trackIdToDelete);
+      
+      // Remove from all playlists
+      const newFavorites = state.playlists.favorites.filter(id => id !== trackIdToDelete);
+      const newRecentlyPlayed = state.playlists.recentlyPlayed.filter(id => id !== trackIdToDelete);
+      
+      const newCustomPlaylists = Object.fromEntries(
+        Object.entries(state.playlists.custom).map(([playlistId, playlist]) => [
+          playlistId,
+          {
+            ...playlist,
+            tracks: playlist.tracks.filter(id => id !== trackIdToDelete)
+          }
+        ])
+      );
+
+      // Handle current track if it's being deleted
+      let newCurrentTrackAfterDelete = state.currentTrack;
+      let newCurrentTrackIndexAfterDelete = state.currentTrackIndex;
+      let newIsPlayingAfterDelete = state.isPlaying;
+
+      if (state.currentTrack?.id === trackIdToDelete) {
+        newCurrentTrackAfterDelete = null;
+        newCurrentTrackIndexAfterDelete = -1;
+        newIsPlayingAfterDelete = false;
+      } else {
+        // Find new index of current track in updated queue
+        const currentTrackIndex = newQueueAfterDelete.findIndex(
+          track => track.id === state.currentTrack?.id
+        );
+        newCurrentTrackIndexAfterDelete = currentTrackIndex;
+      }
+
+      return {
+        ...state,
+        tracks: newTracksList,
+        queue: newQueueAfterDelete,
+        currentTrack: newCurrentTrackAfterDelete,
+        currentTrackIndex: newCurrentTrackIndexAfterDelete,
+        isPlaying: newIsPlayingAfterDelete,
+        playlists: {
+          favorites: newFavorites,
+          recentlyPlayed: newRecentlyPlayed,
+          custom: newCustomPlaylists
+        },
+        toasts: [...state.toasts, { id: Date.now(), message: "Track deleted", type: "success" }]
+      };
+
     case "TOGGLE_FAVORITE":
       const trackId = action.trackId;
       const isFavorite = state.playlists.favorites.includes(trackId);
+      const message = isFavorite ? "Removed from favorites" : "Added to favorites";
+      
       return {
         ...state,
         playlists: {
@@ -431,6 +453,7 @@ function musicReducer(state, action) {
             ? state.playlists.favorites.filter((id) => id !== trackId)
             : [...state.playlists.favorites, trackId],
         },
+        toasts: [...state.toasts, { id: Date.now(), message, type: "success" }]
       };
 
     case "TOGGLE_REPEAT":
@@ -517,6 +540,18 @@ function musicReducer(state, action) {
         audioData: action.data,
       };
 
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [...state.toasts, action.toast]
+      };
+
+    case "REMOVE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.filter(toast => toast.id !== action.toastId)
+      };
+
     default:
       return state;
   }
@@ -550,7 +585,7 @@ export const MusicProvider = ({ children }) => {
   useEffect(() => {
     // Extract custom tracks (non-sample tracks)
     const customTracks = state.tracks.filter(
-      (track) => !track.previewUrl.startsWith("/audio/")
+      (track) => !track.previewUrl || !track.previewUrl.startsWith("/audio/")
     );
 
     const stateToSave = {
@@ -619,10 +654,15 @@ export const MusicProvider = ({ children }) => {
     prevTrack: () => dispatch({ type: "PREV_TRACK" }),
     setQueue: (tracks, autoplay = true) =>
       dispatch({ type: "SET_QUEUE", tracks, autoplay }),
+    addToQueue: (track) => dispatch({ type: "ADD_TO_QUEUE", track }),
+    removeFromQueue: (index) => dispatch({ type: "REMOVE_FROM_QUEUE", index }),
+    deleteTrack: (trackId) => dispatch({ type: "DELETE_TRACK", trackId }),
     toggleFavorite: (trackId) => dispatch({ type: "TOGGLE_FAVORITE", trackId }),
     toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
     setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
+    addToast: (toast) => dispatch({ type: "ADD_TOAST", toast }),
+    removeToast: (toastId) => dispatch({ type: "REMOVE_TOAST", toastId }),
     createPlaylist: (name, tracks = []) => {
       const playlistId = `playlist-${Date.now()}`;
       dispatch({

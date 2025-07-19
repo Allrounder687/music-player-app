@@ -7,6 +7,7 @@ import {
   FaMusic,
   FaFolder,
   FaPalette,
+  FaPlay,
 } from "react-icons/fa";
 import { FileSelector } from "./FileSelector";
 import { ThemeSelector } from "./ThemeSelector";
@@ -26,6 +27,7 @@ export const Sidebar = () => {
       label: "Favourites",
     },
     { to: "/playlists", icon: <FaList className="mr-3" />, label: "Playlists" },
+    { to: "/queue", icon: <FaPlay className="mr-3" />, label: "Queue" },
   ];
 
   const handleOpenFolder = () => {

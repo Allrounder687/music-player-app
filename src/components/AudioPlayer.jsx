@@ -85,7 +85,7 @@ export const AudioPlayer = () => {
           url = currentTrack.previewUrl;
           console.log(`Using preview URL as fallback: ${url}`);
         } else {
-          console.error("No valid source found for track:", currentTrack);
+          // Silently handle missing audio source without console error
           setError("No valid audio source found");
           setIsLoading(false);
           loadingRef.current = false;
