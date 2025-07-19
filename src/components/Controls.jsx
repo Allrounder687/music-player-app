@@ -74,23 +74,37 @@ export const Controls = ({
     if (currentTime >= duration - 0.5 && duration > 0) {
       console.log("Track ended, moving to next track");
 
-      // If repeat is on, just reset the time
+      // If repeat is on, just reset the time and restart playback
       if (repeat) {
+        console.log("Repeat is on, restarting track");
         setCurrentTime(0);
         if (setGlobalCurrentTime) {
           setGlobalCurrentTime(0);
+        }
+        // Make sure playback continues
+        if (!isPlaying && onPlayPause) {
+          onPlayPause();
         }
         return;
       }
 
       // Otherwise, move to next track
+      console.log("Moving to next track");
       setCurrentTime(0);
       if (setGlobalCurrentTime) {
         setGlobalCurrentTime(0);
       }
       onNext();
     }
-  }, [currentTime, duration, onNext, setGlobalCurrentTime, repeat]);
+  }, [
+    currentTime,
+    duration,
+    onNext,
+    setGlobalCurrentTime,
+    repeat,
+    isPlaying,
+    onPlayPause,
+  ]);
 
   // Use the callback in an effect
   useEffect(() => {
@@ -189,7 +203,7 @@ export const Controls = ({
                   ? `text-${theme.colors.primary.main}`
                   : `text-${theme.colors.text.muted}`
               } 
-                hover:text-${theme.colors.text.primary}`}
+                hover:text-${theme.colors.text.primary} transition-colors`}
               title={shuffle ? "Shuffle is on" : "Shuffle is off"}
             >
               <FaRandom />
@@ -201,10 +215,29 @@ export const Controls = ({
                   ? `text-${theme.colors.primary.main}`
                   : `text-${theme.colors.text.muted}`
               } 
-                hover:text-${theme.colors.text.primary}`}
+                hover:text-${theme.colors.text.primary} transition-colors`}
               title={repeat ? "Repeat is on" : "Repeat is off"}
             >
               <FaRedo />
+            </button>
+            <button
+              onClick={() => {
+                setCurrentTime(0);
+                if (setGlobalCurrentTime) {
+                  setGlobalCurrentTime(0);
+                }
+              }}
+              className={`text-${theme.colors.text.muted} hover:text-${theme.colors.text.primary} transition-colors`}
+              title="Restart track"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-4 h-4"
+              >
+                <path d="M9.195 18.44c1.25.713 2.805-.19 2.805-1.629v-2.34l6.945 3.968c1.25.714 2.805-.188 2.805-1.628V8.688c0-1.44-1.555-2.342-2.805-1.628L12 11.03v-2.34c0-1.44-1.555-2.343-2.805-1.629l-7.108 4.062c-1.26.72-1.26 2.536 0 3.256l7.108 4.061z" />
+              </svg>
             </button>
           </div>
 

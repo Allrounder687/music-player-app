@@ -275,9 +275,14 @@ function musicReducer(state, action) {
         return state;
       }
 
-      // Make sure tracks have all required properties
+      // Make sure tracks have all required properties, with more lenient validation for imported tracks
       const validTracks = action.tracks.filter(
-        (track) => track && track.id && track.title && track.previewUrl
+        (track) =>
+          track &&
+          track.id &&
+          track.title &&
+          // Allow tracks with previewUrl or filePath (for imported local files)
+          (track.previewUrl || track.filePath)
       );
 
       if (validTracks.length === 0) {
@@ -286,6 +291,63 @@ function musicReducer(state, action) {
       }
 
       console.log("Valid tracks for queue:", validTracks);
+
+      // For imported tracks, add them to a new "Imported" playlist if they don't exist yet
+      const newTracks = validTracks.filter(
+        (track) => !state.tracks.some((t) => t.id === track.id)
+      );
+
+      let updatedPlaylists = state.playlists;
+
+      // If we have new tracks from an import, add them to an "Imported" playlist
+      if (newTracks.length > 0 && !action.autoplay) {
+        // Check if "Imported" playlist exists, create it if not
+        const importedPlaylistId = "imported";
+        const hasImportedPlaylist =
+          state.playlists.custom && state.playlists.custom[importedPlaylistId];
+
+        if (hasImportedPlaylist) {
+          // Add to existing imported playlist
+          updatedPlaylists = {
+            ...state.playlists,
+            custom: {
+              ...state.playlists.custom,
+              [importedPlaylistId]: {
+                ...state.playlists.custom[importedPlaylistId],
+                tracks: [
+                  ...state.playlists.custom[importedPlaylistId].tracks,
+                  ...newTracks.map((track) => track.id),
+                ],
+              },
+            },
+          };
+        } else {
+          // Create new imported playlist
+          updatedPlaylists = {
+            ...state.playlists,
+            custom: {
+              ...state.playlists.custom,
+              [importedPlaylistId]: {
+                name: "Imported Music",
+                tracks: newTracks.map((track) => track.id),
+              },
+            },
+          };
+        }
+      }
+
+      // Add to recently played if autoplay
+      if (action.autoplay) {
+        updatedPlaylists = {
+          ...updatedPlaylists,
+          recentlyPlayed: [
+            validTracks[0].id,
+            ...state.playlists.recentlyPlayed.filter(
+              (id) => id !== validTracks[0].id
+            ),
+          ].slice(0, 20),
+        };
+      }
 
       // Create a new state with the updated queue
       const newState = {
@@ -297,24 +359,9 @@ function musicReducer(state, action) {
         currentTime: 0,
         duration: validTracks[0].duration || 0,
         // Also update the tracks list to include these new tracks
-        tracks: [
-          ...state.tracks,
-          ...validTracks.filter(
-            (track) => !state.tracks.some((t) => t.id === track.id)
-          ),
-        ],
-        // Add to recently played if autoplay
-        playlists: action.autoplay
-          ? {
-              ...state.playlists,
-              recentlyPlayed: [
-                validTracks[0].id,
-                ...state.playlists.recentlyPlayed.filter(
-                  (id) => id !== validTracks[0].id
-                ),
-              ].slice(0, 20),
-            }
-          : state.playlists,
+        tracks: [...state.tracks, ...newTracks],
+        // Update playlists
+        playlists: updatedPlaylists,
       };
 
       console.log("New state after SET_QUEUE:", {
@@ -322,6 +369,7 @@ function musicReducer(state, action) {
         isPlaying: newState.isPlaying,
         queueLength: newState.queue.length,
         tracksLength: newState.tracks.length,
+        newTracksAdded: newTracks.length,
       });
 
       return newState;

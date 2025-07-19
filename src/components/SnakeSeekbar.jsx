@@ -45,7 +45,7 @@ export const SnakeSeekbar = ({
 
       // Create a more pronounced wave effect
       const frequency = 0.15; // Frequency for waves
-      const phase = Date.now() * 0.0008; // Animation speed
+      const phase = Date.now() * 0.001; // Animation speed - kept faster from previous changes
       const offset = index * 0.02; // Offset based on index for varied wave
 
       // Use audio data to influence the wave if available
@@ -380,25 +380,7 @@ export const SnakeSeekbar = ({
           }}
         />
 
-        {/* Snake head */}
-        {headPosition.x > 0 && (
-          <g
-            transform={`translate(${headPosition.x}, ${
-              8 + headPosition.y
-            }) rotate(${headPosition.angle})`}
-            style={{
-              filter: `drop-shadow(0 0 ${
-                getGlowIntensity() * 3
-              }px ${getThemeColor(getGlowIntensity(), true)})`,
-            }}
-          >
-            {/* Main head shape */}
-            <path d="M 0,0 L 4,-1.5 Q 5,0 4,1.5 Z" fill={getThemeColor(1)} />
-
-            {/* Eye */}
-            <circle cx="2" cy="-0.5" r="0.5" fill="#ffffff" />
-          </g>
-        )}
+        {/* Snake head removed */}
       </svg>
 
       {/* Hover tooltip */}

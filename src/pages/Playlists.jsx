@@ -6,9 +6,12 @@ import {
   FaMusic,
   FaTrash,
   FaEdit,
+  FaFolderOpen,
+  FaFileImport,
 } from "react-icons/fa";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
+import { ImportMusic } from "../components/ImportMusic";
 
 export const Playlists = () => {
   const {
@@ -23,6 +26,7 @@ export const Playlists = () => {
   const [playlists, setPlaylists] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
   const [newPlaylist, setNewPlaylist] = useState({
     name: "",
@@ -140,17 +144,30 @@ export const Playlists = () => {
             {playlists.length} playlists
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className={`bg-${
-            theme?.colors?.primary?.main || "purple-600"
-          } hover:bg-${
-            theme?.colors?.primary?.dark || "purple-700"
-          } text-white px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors`}
-        >
-          <FaPlus className="mr-2" />
-          New Playlist
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className={`bg-${
+              theme?.colors?.background?.secondary || "gray-700"
+            } hover:bg-${theme?.colors?.background?.hover || "gray-600"} text-${
+              theme?.colors?.text?.main || "white"
+            } px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors`}
+          >
+            <FaFolderOpen className="mr-2" />
+            Import Music
+          </button>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className={`bg-${
+              theme?.colors?.primary?.main || "purple-600"
+            } hover:bg-${
+              theme?.colors?.primary?.dark || "purple-700"
+            } text-white px-4 py-2 rounded-full text-sm font-medium flex items-center transition-colors`}
+          >
+            <FaPlus className="mr-2" />
+            New Playlist
+          </button>
+        </div>
       </div>
 
       {/* Create Playlist Modal */}
@@ -292,6 +309,13 @@ export const Playlists = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Import Music Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <ImportMusic onClose={() => setShowImportModal(false)} />
         </div>
       )}
 

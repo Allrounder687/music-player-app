@@ -1,22 +1,18 @@
-import React, { useState } from "react";
+import React from "react";
 import { useMusic } from "../store/MusicContext";
 import { Controls } from "../components/Controls";
 import { FaHeart, FaRegHeart, FaEllipsisH, FaMusic } from "react-icons/fa";
-import { formatTime } from "../utils/audioUtils";
 
 export const NowPlaying = () => {
   const {
     tracks,
     currentTrack,
     isPlaying,
-    volume,
     playlists,
-    currentTime,
     togglePlayback,
     nextTrack,
     prevTrack,
     setVolume,
-    setCurrentTime,
     toggleFavorite,
     playTrack,
   } = useMusic();
@@ -74,86 +70,6 @@ export const NowPlaying = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Custom audio player UI */}
-      <div className="w-full mb-4 p-4 bg-gray-800 rounded-lg">
-        <div className="flex flex-col">
-          {/* Track info */}
-          <div className="flex items-center mb-3">
-            <div className="w-10 h-10 bg-gray-700 rounded-md flex items-center justify-center mr-3">
-              <FaMusic className="text-gray-400" />
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-white">{currentTrack.title}</div>
-              <div className="text-sm text-gray-400">{currentTrack.artist}</div>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center justify-center space-x-4 mb-3">
-            <button
-              onClick={prevTrack}
-              className="text-gray-300 hover:text-white p-2"
-            >
-              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path>
-              </svg>
-            </button>
-
-            <button
-              onClick={togglePlayback}
-              className="bg-white text-black rounded-full h-10 w-10 flex items-center justify-center hover:bg-gray-200"
-            >
-              {isPlaying ? (
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
-                </svg>
-              ) : (
-                <svg
-                  className="h-5 w-5 ml-1"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M8 5v14l11-7z"></path>
-                </svg>
-              )}
-            </button>
-
-            <button
-              onClick={nextTrack}
-              className="text-gray-300 hover:text-white p-2"
-            >
-              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"></path>
-              </svg>
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-400 w-10 text-right">
-              {formatTime(currentTime)}
-            </span>
-            <div className="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white"
-                style={{
-                  width: `${
-                    (currentTime / (currentTrack?.duration || 1)) * 100
-                  }%`,
-                }}
-              ></div>
-            </div>
-            <span className="text-xs text-gray-400 w-10">
-              {formatTime(currentTrack?.duration || 0)}
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Main content */}
       <div className="flex-1 flex flex-col md:flex-row p-4 overflow-hidden">
         {/* Album Art */}

@@ -35,7 +35,7 @@ export const AudioPlayer = () => {
     if (loadingRef.current) return;
 
     const loadAudio = async () => {
-      if (!currentTrack?.path && !currentTrack?.previewUrl) {
+      if (!currentTrack) {
         console.log("No track to load");
         setAudioUrl(null);
         return;
@@ -46,9 +46,35 @@ export const AudioPlayer = () => {
         setIsLoading(true);
         setError(null);
 
-        // Use path or previewUrl, preferring path for local files
-        const sourcePath = currentTrack.path || currentTrack.previewUrl;
-        console.log(`Loading audio from: ${sourcePath}`);
+        console.log("Current track:", currentTrack);
+
+        // Determine the source for the audio
+        let sourcePath;
+
+        // For imported files, the previewUrl might already be a blob URL
+        if (
+          currentTrack.previewUrl &&
+          currentTrack.previewUrl.startsWith("blob:")
+        ) {
+          sourcePath = currentTrack.previewUrl;
+          console.log(`Using existing blob URL: ${sourcePath}`);
+        }
+        // For local files, use path or filePath
+        else if (currentTrack.path || currentTrack.filePath) {
+          sourcePath = currentTrack.path || currentTrack.filePath;
+          console.log(`Using file path: ${sourcePath}`);
+        }
+        // For streaming URLs, use previewUrl
+        else if (currentTrack.previewUrl) {
+          sourcePath = currentTrack.previewUrl;
+          console.log(`Using preview URL: ${sourcePath}`);
+        } else {
+          console.error("No valid source found for track:", currentTrack);
+          setError("No valid audio source found");
+          setIsLoading(false);
+          loadingRef.current = false;
+          return;
+        }
 
         // Create a blob URL for the audio file
         const url = await createAudioUrl(sourcePath);
@@ -98,7 +124,11 @@ export const AudioPlayer = () => {
     // Clean up previous blob URL when track changes
     return () => {
       if (audioUrl && audioUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(audioUrl);
+        // Don't revoke URLs that might be needed for imported files
+        // Only revoke URLs that we created in this component
+        if (!currentTrack || audioUrl !== currentTrack.previewUrl) {
+          URL.revokeObjectURL(audioUrl);
+        }
       }
 
       // Cancel any ongoing animation frame

@@ -7,6 +7,7 @@ import { AudioPlayer } from "../components/AudioPlayer";
 import { NowPlaying } from "../pages/NowPlaying";
 import { Favourites } from "../pages/Favourites";
 import { Playlists } from "../pages/Playlists";
+import { Library } from "../pages/Library";
 import { MusicProvider } from "../store/MusicContext";
 import { ThemeProvider } from "../store/ThemeContext";
 import "../styles/main.css";
@@ -23,6 +24,7 @@ const App = () => {
               <main className="flex-1 overflow-y-auto">
                 <Routes>
                   <Route path="/" element={<NowPlaying />} />
+                  <Route path="/library" element={<Library />} />
                   <Route path="/favourites" element={<Favourites />} />
                   <Route path="/playlists" element={<Playlists />} />
                 </Routes>

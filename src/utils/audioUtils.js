@@ -5,7 +5,7 @@
 /**
  * Creates a blob URL for a local file path
  * This is needed because the audio element can't directly play local file paths
- * @param {string} filePath - Path to the local audio file
+ * @param {string} filePath - Path to the local audio file or blob URL
  * @returns {Promise<string>} - Blob URL that can be used in an audio element
  */
 export const createAudioUrl = async (filePath) => {
@@ -23,9 +23,32 @@ export const createAudioUrl = async (filePath) => {
     return filePath;
   }
 
+  // If we're in a browser and this is a File object URL from the File API
+  if (typeof filePath === "object" && filePath instanceof File) {
+    console.log(`Creating blob URL for File object: ${filePath.name}`);
+    return URL.createObjectURL(filePath);
+  }
+
   // Check if we're in Electron
   if (!window.electron?.audio) {
     console.warn("Not running in Electron or audio API not available");
+
+    // If the path looks like it might be a blob URL that was stored as a string
+    if (typeof filePath === "string" && filePath.includes("previewUrl")) {
+      try {
+        // Try to parse it as JSON to extract the previewUrl
+        const trackData = JSON.parse(filePath);
+        if (trackData && trackData.previewUrl) {
+          console.log(
+            `Extracted previewUrl from JSON string: ${trackData.previewUrl}`
+          );
+          return trackData.previewUrl;
+        }
+      } catch (e) {
+        // Not JSON, continue with normal processing
+      }
+    }
+
     return filePath; // Return the original path as fallback
   }
 

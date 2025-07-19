@@ -7,20 +7,19 @@ import {
   FaMusic,
   FaFolder,
   FaPalette,
-  FaTools,
 } from "react-icons/fa";
 import { FileSelector } from "./FileSelector";
 import { ThemeSelector } from "./ThemeSelector";
-import { ElectronTest } from "./ElectronTest";
 import { useTheme } from "../store/ThemeContext";
 
 export const Sidebar = () => {
   const [showFileSelector, setShowFileSelector] = useState(false);
-  const [showElectronTest, setShowElectronTest] = useState(false);
+  // Removed Electron test state
   const { theme } = useTheme();
 
   const navItems = [
     { to: "/", icon: <FaHome className="mr-3" />, label: "Now Playing" },
+    { to: "/library", icon: <FaMusic className="mr-3" />, label: "Library" },
     {
       to: "/favourites",
       icon: <FaHeart className="mr-3" />,
@@ -75,11 +74,11 @@ export const Sidebar = () => {
           </button>
 
           <button
-            onClick={() => setShowElectronTest(true)}
+            onClick={() => (window.location.href = "/library")}
             className={`w-full flex items-center p-2 rounded-lg hover:bg-${theme.colors.background.tertiary} transition-colors`}
           >
-            <FaTools className="mr-3" />
-            <span>Test Electron Bridge</span>
+            <FaMusic className="mr-3" />
+            <span>View Library</span>
           </button>
         </div>
       </div>
@@ -88,24 +87,7 @@ export const Sidebar = () => {
         <FileSelector onClose={() => setShowFileSelector(false)} />
       )}
 
-      {showElectronTest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">
-                Electron Bridge Test
-              </h2>
-              <button
-                onClick={() => setShowElectronTest(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <ElectronTest />
-          </div>
-        </div>
-      )}
+      {/* Electron test removed */}
     </>
   );
 };

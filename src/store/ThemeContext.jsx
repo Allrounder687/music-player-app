@@ -20,6 +20,7 @@ export const themes = {
         main: "gray-900",
         secondary: "gray-800",
         tertiary: "gray-700",
+        hover: "gray-700",
       },
       text: {
         primary: "white",
@@ -41,6 +42,7 @@ export const themes = {
         main: "blue-950",
         secondary: "blue-900",
         tertiary: "blue-800",
+        hover: "blue-800",
       },
       text: {
         primary: "white",
@@ -62,6 +64,7 @@ export const themes = {
         main: "amber-950",
         secondary: "amber-900",
         tertiary: "amber-800",
+        hover: "amber-800",
       },
       text: {
         primary: "white",
@@ -83,6 +86,7 @@ export const themes = {
         main: "black",
         secondary: "gray-950",
         tertiary: "gray-900",
+        hover: "gray-900",
       },
       text: {
         primary: "white",
@@ -90,6 +94,50 @@ export const themes = {
         muted: "gray-500",
       },
       border: "gray-800",
+    },
+  },
+  midnightBlack: {
+    name: "Midnight Black",
+    colors: {
+      primary: {
+        main: "indigo-500",
+        light: "indigo-400",
+        dark: "indigo-600",
+      },
+      background: {
+        main: "black",
+        secondary: "gray-950",
+        tertiary: "gray-900",
+        hover: "gray-900",
+      },
+      text: {
+        primary: "indigo-50",
+        secondary: "indigo-200",
+        muted: "indigo-300",
+      },
+      border: "indigo-900",
+    },
+  },
+  emeraldNight: {
+    name: "Emerald Night",
+    colors: {
+      primary: {
+        main: "emerald-500",
+        light: "emerald-400",
+        dark: "emerald-600",
+      },
+      background: {
+        main: "gray-950",
+        secondary: "gray-900",
+        tertiary: "gray-800",
+        hover: "gray-800",
+      },
+      text: {
+        primary: "white",
+        secondary: "emerald-100",
+        muted: "emerald-200",
+      },
+      border: "emerald-900",
     },
   },
 };
