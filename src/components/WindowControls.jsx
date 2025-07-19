@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaWindowMinimize,
   FaWindowMaximize,
@@ -11,9 +11,29 @@ export const WindowControls = () => {
   const { theme } = useTheme();
   const [isMaximized, setIsMaximized] = useState(false);
 
-  // Check if we're running in Electron
+  // Check if we're running in Electron - this won't change during component lifecycle
   const isElectron = window.electron !== undefined;
 
+  // Define handlers with useCallback to prevent unnecessary re-renders
+  const handleMinimize = useCallback(() => {
+    if (isElectron) {
+      window.electron.window.minimize();
+    }
+  }, [isElectron]);
+
+  const handleMaximize = useCallback(() => {
+    if (isElectron) {
+      window.electron.window.maximize();
+    }
+  }, [isElectron]);
+
+  const handleClose = useCallback(() => {
+    if (isElectron) {
+      window.electron.window.close();
+    }
+  }, [isElectron]);
+
+  // Set up event listeners for window state changes
   useEffect(() => {
     if (!isElectron) return;
 
@@ -34,28 +54,10 @@ export const WindowControls = () => {
 
     // Cleanup listeners
     return () => {
-      if (unsubscribeMaximize) unsubscribeMaximize();
-      if (unsubscribeUnmaximize) unsubscribeUnmaximize();
+      if (typeof unsubscribeMaximize === "function") unsubscribeMaximize();
+      if (typeof unsubscribeUnmaximize === "function") unsubscribeUnmaximize();
     };
   }, [isElectron]);
-
-  const handleMinimize = () => {
-    if (isElectron) {
-      window.electron.window.minimize();
-    }
-  };
-
-  const handleMaximize = () => {
-    if (isElectron) {
-      window.electron.window.maximize();
-    }
-  };
-
-  const handleClose = () => {
-    if (isElectron) {
-      window.electron.window.close();
-    }
-  };
 
   if (!isElectron) return null;
 

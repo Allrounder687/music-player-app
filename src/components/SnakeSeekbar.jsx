@@ -1,15 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "../store/ThemeContext";
+import { useMusic } from "../store/MusicContext";
 
 export const SnakeSeekbar = ({
   currentTime,
   duration,
   onChange,
-  audioData = null,
   className = "",
   ...props
 }) => {
   const { theme } = useTheme();
+  const { audioData } = useMusic();
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [wavePoints, setWavePoints] = useState([]);
@@ -18,7 +19,7 @@ export const SnakeSeekbar = ({
 
   const seekbarRef = useRef(null);
   const animationRef = useRef(null);
-  const wavePointCount = 80; // Increased number of points for smoother waves
+  const wavePointCount = 80; // Number of points for the wave pattern
 
   // Initialize wave points
   useEffect(() => {
@@ -31,6 +32,72 @@ export const SnakeSeekbar = ({
         active: false, // Whether this point is before the current progress
       }));
     setWavePoints(initialWavePoints);
+  }, [wavePointCount]);
+
+  // Calculate Y position for wave points with audio reactivity - memoized to avoid dependency issues
+  const getWaveYPosition = useCallback(
+    (x, index, audioAmplitude = 1) => {
+      // Base amplitude for the wave
+      const baseAmplitude = 2;
+
+      // Apply audio reactivity to the amplitude
+      const amplitude = baseAmplitude * audioAmplitude;
+
+      // Create a more pronounced wave effect
+      const frequency = 0.15; // Frequency for waves
+      const phase = Date.now() * 0.0008; // Animation speed
+      const offset = index * 0.02; // Offset based on index for varied wave
+
+      // Use audio data to influence the wave if available
+      let frequencyModulation = 1;
+      let phaseModulation = 0;
+
+      if (
+        audioData &&
+        audioData.frequencyData &&
+        audioData.frequencyData.length > 0
+      ) {
+        // Use frequency data to modulate the wave
+        const freqIndex = Math.floor(
+          (x / 100) * (audioData.frequencyData.length / 2)
+        );
+        if (freqIndex < audioData.frequencyData.length) {
+          // Normalize to 0-1 range and add small offset to avoid flat lines
+          frequencyModulation =
+            (audioData.frequencyData[freqIndex] / 255) * 0.5 + 0.5;
+
+          // Use bass/mid/treble to influence phase
+          phaseModulation =
+            (audioData.bass * 0.5 +
+              audioData.mid * 0.3 +
+              audioData.treble * 0.2) *
+            Math.PI;
+        }
+      }
+
+      // Combine multiple sine waves for more natural movement
+      const wave1 =
+        Math.sin(x * frequency + phase + offset + phaseModulation) *
+        amplitude *
+        frequencyModulation;
+      const wave2 =
+        Math.sin(x * frequency * 0.5 + phase * 1.3) * (amplitude * 0.3);
+
+      return wave1 + wave2;
+    },
+    [audioData]
+  );
+
+  // Update wave points based on current playback percentage
+  const updateWavePoints = useCallback((percentage) => {
+    const progressX = percentage * 100;
+
+    setWavePoints((prevPoints) => {
+      return prevPoints.map((point) => ({
+        ...point,
+        active: point.x <= progressX,
+      }));
+    });
   }, []);
 
   // Update wave points based on current time
@@ -58,7 +125,41 @@ export const SnakeSeekbar = ({
 
       setHeadPosition({ x: headX, y: headY, angle });
     }
-  }, [currentTime, duration, isDragging]);
+  }, [currentTime, duration, isDragging, getWaveYPosition, updateWavePoints]);
+
+  // Get audio-reactive amplitude based on frequency data
+  const getAudioAmplitude = useCallback(() => {
+    if (!audioData || !audioData.bass) {
+      return 1; // Default amplitude if no audio data
+    }
+
+    // Use bass for more pronounced effect, with mid and treble for detail
+    const bassWeight = 0.6;
+    const midWeight = 0.3;
+    const trebleWeight = 0.1;
+
+    // Calculate weighted average
+    const amplitude =
+      (audioData.bass * bassWeight +
+        audioData.mid * midWeight +
+        audioData.treble * trebleWeight) *
+      2; // Multiply by 2 to make the effect more visible
+
+    // Ensure amplitude is at least 1 and at most 5
+    return Math.max(1, Math.min(5, amplitude));
+  }, [audioData]);
+
+  // Animate wave points
+  const animateWave = useCallback(() => {
+    const audioAmplitude = getAudioAmplitude();
+
+    setWavePoints((prevPoints) => {
+      return prevPoints.map((point, index) => ({
+        ...point,
+        y: getWaveYPosition(point.x, index, audioAmplitude),
+      }));
+    });
+  }, [getAudioAmplitude, getWaveYPosition]);
 
   // Animation loop for wave animation
   useEffect(() => {
@@ -74,7 +175,7 @@ export const SnakeSeekbar = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [wavePoints]);
+  }, [animateWave]);
 
   // Handle mouse events
   const handleMouseDown = (e) => {
@@ -137,56 +238,6 @@ export const SnakeSeekbar = ({
     });
   };
 
-  // Update wave points based on current playback percentage
-  const updateWavePoints = (percentage) => {
-    const progressX = percentage * 100;
-
-    setWavePoints((prevPoints) => {
-      return prevPoints.map((point) => ({
-        ...point,
-        active: point.x <= progressX,
-      }));
-    });
-  };
-
-  // Animate wave points
-  const animateWave = () => {
-    setWavePoints((prevPoints) => {
-      return prevPoints.map((point, index) => ({
-        ...point,
-        y: getWaveYPosition(point.x, index),
-      }));
-    });
-  };
-
-  // Calculate Y position for wave points with more pronounced waves
-  const getWaveYPosition = (x, index) => {
-    // Create a more pronounced wave effect
-    const amplitude = 4; // Increased height of the wave
-    const frequency = 0.15; // Increased frequency for more waves
-    const phase = Date.now() * 0.0008; // Slightly faster animation
-    const offset = index * 0.02; // Offset based on index for varied wave
-
-    // Combine multiple sine waves for more natural movement
-    const wave1 = Math.sin(x * frequency + phase + offset) * amplitude;
-    const wave2 =
-      Math.sin(x * frequency * 0.5 + phase * 1.3) * (amplitude * 0.3);
-
-    return wave1 + wave2;
-  };
-
-  // Get intensity based on audio data or use default
-  const getIntensity = (position) => {
-    if (audioData && audioData.intensityMap) {
-      // Find closest intensity data point
-      const intensityPoint = audioData.intensityMap.find(
-        (point) => Math.abs(point.position - position) < 0.01
-      );
-      return intensityPoint ? intensityPoint.intensity : 0.8;
-    }
-    return 0.8; // Default intensity
-  };
-
   // Format time for tooltip display
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return "0:00";
@@ -200,34 +251,37 @@ export const SnakeSeekbar = ({
     duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
   // Get theme-specific colors
-  const getThemeColor = (intensity, isActive = true) => {
-    let baseColor;
-    switch (theme.colors.primary.main) {
-      case "blue-600":
-        baseColor = isActive
-          ? `rgba(37, 99, 235, ${intensity})`
-          : "rgba(37, 99, 235, 0.2)";
-        break;
-      case "red-600":
-        baseColor = isActive
-          ? `rgba(220, 38, 38, ${intensity})`
-          : "rgba(220, 38, 38, 0.2)";
-        break;
-      case "gray-400":
-        baseColor = isActive
-          ? `rgba(156, 163, 175, ${intensity})`
-          : "rgba(156, 163, 175, 0.2)";
-        break;
-      default:
-        baseColor = isActive
-          ? `rgba(168, 85, 247, ${intensity})`
-          : "rgba(168, 85, 247, 0.2)";
-    }
-    return baseColor;
-  };
+  const getThemeColor = useCallback(
+    (intensity, isActive = true) => {
+      let baseColor;
+      switch (theme.colors.primary.main) {
+        case "blue-600":
+          baseColor = isActive
+            ? `rgba(37, 99, 235, ${intensity})`
+            : "rgba(37, 99, 235, 0.2)";
+          break;
+        case "red-600":
+          baseColor = isActive
+            ? `rgba(220, 38, 38, ${intensity})`
+            : "rgba(220, 38, 38, 0.2)";
+          break;
+        case "gray-400":
+          baseColor = isActive
+            ? `rgba(156, 163, 175, ${intensity})`
+            : "rgba(156, 163, 175, 0.2)";
+          break;
+        default:
+          baseColor = isActive
+            ? `rgba(168, 85, 247, ${intensity})`
+            : "rgba(168, 85, 247, 0.2)";
+      }
+      return baseColor;
+    },
+    [theme.colors.primary.main]
+  );
 
   // Create wave path data
-  const createWavePath = (points, isActive) => {
+  const createWavePath = useCallback((points) => {
     if (points.length === 0) return "";
 
     // Start at the first point
@@ -244,7 +298,29 @@ export const SnakeSeekbar = ({
     }
 
     return path;
-  };
+  }, []);
+
+  // Get audio-reactive glow intensity
+  const getGlowIntensity = useCallback(() => {
+    if (!audioData || !audioData.volume) return 0.7;
+    return 0.5 + audioData.volume * 0.5; // Scale between 0.5 and 1.0
+  }, [audioData]);
+
+  // Get stroke width based on audio intensity
+  const getStrokeWidth = useCallback(
+    (isActive) => {
+      if (!audioData || !audioData.volume) return isActive ? 2 : 1.5;
+
+      // Base width
+      const baseWidth = isActive ? 2 : 1.5;
+
+      // Add audio reactivity
+      const audioFactor = 1 + audioData.volume * 1.5; // Scale between 1 and 2.5
+
+      return baseWidth * audioFactor;
+    },
+    [audioData]
+  );
 
   // Split wave points into active and inactive
   const activePoints = wavePoints.filter((p) => p.active);
@@ -268,7 +344,7 @@ export const SnakeSeekbar = ({
       >
         {/* Background line */}
         <path
-          d={createWavePath(wavePoints, false)}
+          d={createWavePath(wavePoints)}
           stroke="rgba(255, 255, 255, 0.1)"
           strokeWidth="1"
           fill="none"
@@ -277,35 +353,41 @@ export const SnakeSeekbar = ({
 
         {/* Inactive wave path */}
         <path
-          d={createWavePath(wavePoints, false)}
+          d={createWavePath(wavePoints)}
           stroke={getThemeColor(0.2, false)}
-          strokeWidth="1.5"
+          strokeWidth={getStrokeWidth(false)}
           fill="none"
           className="wave-path"
         />
 
         {/* Active wave path */}
         <path
-          d={createWavePath(activePoints, true)}
+          d={createWavePath(activePoints)}
           stroke={getThemeColor(0.9, true)}
-          strokeWidth="2"
+          strokeWidth={getStrokeWidth(true)}
           fill="none"
           className="wave-path active"
+          style={{
+            filter: `drop-shadow(0 0 ${
+              getGlowIntensity() * 3
+            }px ${getThemeColor(getGlowIntensity(), true)})`,
+          }}
         />
 
-        {/* Snake head (more realistic) */}
+        {/* Snake head */}
         <g
           transform={`translate(${headPosition.x}, ${
             8 + headPosition.y
           }) rotate(${headPosition.angle})`}
           className="snake-head"
+          style={{
+            filter: `drop-shadow(0 0 ${
+              getGlowIntensity() * 3
+            }px ${getThemeColor(getGlowIntensity(), true)})`,
+          }}
         >
           {/* Main head shape */}
-          <path
-            d="M 0,0 L 4,-1.5 Q 5,0 4,1.5 Z"
-            fill={getThemeColor(1)}
-            className="drop-shadow-glow"
-          />
+          <path d="M 0,0 L 4,-1.5 Q 5,0 4,1.5 Z" fill={getThemeColor(1)} />
 
           {/* Eye */}
           <circle cx="2" cy="-0.5" r="0.5" fill="#ffffff" />

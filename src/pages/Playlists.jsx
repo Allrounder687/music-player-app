@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaPlus,
   FaEllipsisH,
@@ -29,66 +29,97 @@ export const Playlists = () => {
     description: "",
   });
 
-  // Load playlists from MusicContext
-  useEffect(() => {
-    const loadedPlaylists = getAllPlaylists().map((playlist) => ({
-      id: playlist.id,
-      name: playlist.name,
-      trackCount: playlist.tracks.length,
-      // Generate a consistent image URL based on playlist name
-      imageUrl: `https://source.unsplash.com/random/300x300/?${encodeURIComponent(
-        playlist.name.split(" ")[0] || "music"
-      )}`,
-    }));
+  // Load playlists from MusicContext - memoize the function to avoid dependency issues
+  const loadPlaylists = useCallback(() => {
+    try {
+      const loadedPlaylists = getAllPlaylists().map((playlist) => ({
+        id: playlist.id,
+        name: playlist.name,
+        trackCount: playlist.tracks.length,
+        // Generate a consistent image URL based on playlist name
+        imageUrl: `https://source.unsplash.com/random/300x300/?${encodeURIComponent(
+          playlist.name.split(" ")[0] || "music"
+        )}`,
+      }));
 
-    setPlaylists(loadedPlaylists);
+      setPlaylists(loadedPlaylists);
+    } catch (error) {
+      console.error("Error loading playlists:", error);
+    }
   }, [getAllPlaylists]);
 
-  const handleCreatePlaylist = (e) => {
-    e.preventDefault();
-    if (!newPlaylist.name.trim()) return;
+  // Load playlists on component mount and when dependencies change
+  useEffect(() => {
+    loadPlaylists();
+  }, [loadPlaylists]);
 
-    // Create playlist in MusicContext
-    const playlistId = createPlaylist(newPlaylist.name);
+  // Create playlist handler
+  const handleCreatePlaylist = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!newPlaylist.name.trim()) return;
 
-    const playlist = {
-      id: playlistId,
-      name: newPlaylist.name,
-      description: newPlaylist.description,
-      trackCount: 0,
-      imageUrl: `https://source.unsplash.com/random/300x300/?${encodeURIComponent(
-        newPlaylist.name
-      )}`,
-    };
+      try {
+        // Create playlist in MusicContext
+        const playlistId = createPlaylist(newPlaylist.name);
 
-    setPlaylists([...playlists, playlist]);
-    setNewPlaylist({ name: "", description: "" });
-    setShowCreateForm(false);
-  };
+        const playlist = {
+          id: playlistId,
+          name: newPlaylist.name,
+          description: newPlaylist.description,
+          trackCount: 0,
+          imageUrl: `https://source.unsplash.com/random/300x300/?${encodeURIComponent(
+            newPlaylist.name
+          )}`,
+        };
 
-  const handleDeletePlaylist = (playlistId) => {
+        setPlaylists((prev) => [...prev, playlist]);
+        setNewPlaylist({ name: "", description: "" });
+        setShowCreateForm(false);
+      } catch (error) {
+        console.error("Error creating playlist:", error);
+      }
+    },
+    [newPlaylist, createPlaylist]
+  );
+
+  // Delete playlist handler
+  const handleDeletePlaylist = useCallback((playlistId) => {
     setPlaylistToDelete(playlistId);
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
-  const confirmDeletePlaylist = () => {
+  // Confirm delete handler
+  const confirmDeletePlaylist = useCallback(() => {
     if (!playlistToDelete) return;
 
-    // Delete from MusicContext
-    deletePlaylist(playlistToDelete);
+    try {
+      // Delete from MusicContext
+      deletePlaylist(playlistToDelete);
 
-    // Update local state
-    setPlaylists(playlists.filter((p) => p.id !== playlistToDelete));
-    setShowDeleteConfirm(false);
-    setPlaylistToDelete(null);
-  };
-
-  const handlePlayPlaylist = (playlistId) => {
-    const tracks = getPlaylistTracks(playlistId);
-    if (tracks && tracks.length > 0) {
-      setQueue(tracks, true);
+      // Update local state
+      setPlaylists((prev) => prev.filter((p) => p.id !== playlistToDelete));
+      setShowDeleteConfirm(false);
+      setPlaylistToDelete(null);
+    } catch (error) {
+      console.error("Error deleting playlist:", error);
     }
-  };
+  }, [playlistToDelete, deletePlaylist]);
+
+  // Play playlist handler
+  const handlePlayPlaylist = useCallback(
+    (playlistId) => {
+      try {
+        const tracks = getPlaylistTracks(playlistId);
+        if (tracks && tracks.length > 0) {
+          setQueue(tracks, true);
+        }
+      } catch (error) {
+        console.error("Error playing playlist:", error);
+      }
+    },
+    [getPlaylistTracks, setQueue]
+  );
 
   return (
     <div

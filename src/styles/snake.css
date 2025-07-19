@@ -17,7 +17,7 @@
 }
 
 .wave-path {
-  transition: stroke 0.3s ease;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
 }
 
 .wave-path.active {

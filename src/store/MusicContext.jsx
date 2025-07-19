@@ -62,6 +62,14 @@ const initialState = {
   currentTrackIndex: -1,
   repeat: false,
   shuffle: false,
+  audioData: {
+    bass: 0,
+    mid: 0,
+    treble: 0,
+    volume: 0,
+    frequencyData: [],
+    timeData: [],
+  },
   playlists: {
     favorites: ["1", "3"], // Sample favorite tracks
     recentlyPlayed: [],
@@ -409,6 +417,12 @@ function musicReducer(state, action) {
         },
       };
 
+    case "SET_AUDIO_DATA":
+      return {
+        ...state,
+        audioData: action.data,
+      };
+
     default:
       return state;
   }
@@ -514,6 +528,7 @@ export const MusicProvider = ({ children }) => {
     toggleFavorite: (trackId) => dispatch({ type: "TOGGLE_FAVORITE", trackId }),
     toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
+    setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
     createPlaylist: (name, tracks = []) => {
       const playlistId = `playlist-${Date.now()}`;
       dispatch({

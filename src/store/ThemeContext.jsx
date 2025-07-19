@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 
 // Define theme configurations
 export const themes = {
@@ -93,47 +99,62 @@ const ThemeContext = createContext();
 export const ThemeProvider = ({ children }) => {
   const [currentTheme, setCurrentTheme] = useState("default");
 
-  // Load theme from localStorage on initial render
+  // Load theme from localStorage on initial render - no dependencies needed
   useEffect(() => {
-    const savedTheme = localStorage.getItem("musicAppTheme");
-    if (savedTheme && themes[savedTheme]) {
-      setCurrentTheme(savedTheme);
+    try {
+      const savedTheme = localStorage.getItem("musicAppTheme");
+      if (savedTheme && themes[savedTheme]) {
+        setCurrentTheme(savedTheme);
+      }
+    } catch (error) {
+      console.error("Error loading theme from localStorage:", error);
     }
   }, []);
 
-  // Save theme to localStorage when it changes
+  // Apply theme changes to the document
+  const applyTheme = useCallback((themeName) => {
+    try {
+      localStorage.setItem("musicAppTheme", themeName);
+
+      // Apply theme to CSS variables
+      const theme = themes[themeName];
+      if (!theme) return;
+
+      // Update CSS variables based on the selected theme
+      document.body.className =
+        themeName === "default"
+          ? `bg-${theme.colors.background.main} text-${theme.colors.text.primary}`
+          : `theme-${themeName} bg-${theme.colors.background.main} text-${theme.colors.text.primary}`;
+    } catch (error) {
+      console.error("Error applying theme:", error);
+    }
+  }, []);
+
+  // Save theme to localStorage and apply changes when it changes
   useEffect(() => {
-    localStorage.setItem("musicAppTheme", currentTheme);
+    applyTheme(currentTheme);
+  }, [currentTheme, applyTheme]);
 
-    // Apply theme to CSS variables
-    const root = document.documentElement;
-    const theme = themes[currentTheme];
-
-    // Update CSS variables based on the selected theme
-    document.body.className =
-      currentTheme === "default"
-        ? `bg-${theme.colors.background.main} text-${theme.colors.text.primary}`
-        : `theme-${currentTheme} bg-${theme.colors.background.main} text-${theme.colors.text.primary}`;
-  }, [currentTheme]);
-
-  const changeTheme = (themeName) => {
+  // Theme change handler
+  const changeTheme = useCallback((themeName) => {
     if (themes[themeName]) {
       setCurrentTheme(themeName);
     }
+  }, []);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = {
+    currentTheme,
+    theme: themes[currentTheme],
+    changeTheme,
+    availableThemes: Object.keys(themes).map((key) => ({
+      id: key,
+      name: themes[key].name,
+    })),
   };
 
   return (
-    <ThemeContext.Provider
-      value={{
-        currentTheme,
-        theme: themes[currentTheme],
-        changeTheme,
-        availableThemes: Object.keys(themes).map((key) => ({
-          id: key,
-          name: themes[key].name,
-        })),
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

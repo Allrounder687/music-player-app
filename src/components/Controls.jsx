@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaPlay,
   FaPause,
@@ -12,7 +12,6 @@ import {
 } from "react-icons/fa";
 import { Slider } from "./Slider";
 import { SnakeSeekbar } from "./SnakeSeekbar";
-import { AudioAnalysisService } from "../store/AudioAnalysisService";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
 import "../styles/snake.css";
@@ -35,14 +34,17 @@ export const Controls = ({
     toggleShuffle,
     volume: globalVolume,
     setVolume: setGlobalVolume,
+    audioData,
   } = useMusic();
 
-  const [volume, setVolume] = useState(globalVolume * 100 || 80);
+  const [volume, setVolume] = useState(
+    globalVolume !== undefined ? globalVolume * 100 : 80
+  );
   const [currentTime, setCurrentTime] = useState(globalCurrentTime || 0);
   const [duration, setDuration] = useState(trackDuration || 180); // Set a default duration
-  const [audioData, setAudioData] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [previousVolume, setPreviousVolume] = useState(volume);
+  const { theme } = useTheme();
 
   // Sync with global current time
   useEffect(() => {
@@ -66,9 +68,8 @@ export const Controls = ({
     }
   }, [globalVolume]);
 
-  // We no longer need to simulate progress as we're getting actual progress from the audio element
-  // This effect is kept for handling the end of track
-  useEffect(() => {
+  // Handle end of track with proper dependencies
+  const handleTrackEnd = useCallback(() => {
     // Check if we're at the end of the track (with a small buffer)
     if (currentTime >= duration - 0.5 && duration > 0) {
       console.log("Track ended, moving to next track");
@@ -91,41 +92,34 @@ export const Controls = ({
     }
   }, [currentTime, duration, onNext, setGlobalCurrentTime, repeat]);
 
-  // Generate audio analysis data for visualization
+  // Use the callback in an effect
   useEffect(() => {
-    // For demo purposes, we'll generate some fake audio data
-    const generateAudioData = async () => {
-      // Create a dummy audio buffer
-      const dummyBuffer = {
-        duration: duration || 180, // Use track duration or default to 3 minutes
-        numberOfChannels: 2,
-        sampleRate: 44100,
-      };
+    handleTrackEnd();
+  }, [handleTrackEnd]);
 
-      const analysisData = await AudioAnalysisService.analyzeAudio(dummyBuffer);
-      setAudioData(analysisData);
-    };
+  // Volume change handler
+  const handleVolumeChange = useCallback(
+    (value) => {
+      setVolume(value);
+      setIsMuted(value === 0);
+      setGlobalVolume(value / 100);
+      if (onVolumeChange) {
+        onVolumeChange(value / 100);
+      }
+    },
+    [setGlobalVolume, onVolumeChange]
+  );
 
-    generateAudioData();
-  }, [duration]);
-
-  const handleVolumeChange = (value) => {
-    setVolume(value);
-    setIsMuted(value === 0);
-    setGlobalVolume(value / 100);
-    if (onVolumeChange) {
-      onVolumeChange(value / 100);
-    }
-  };
-
-  const handleMuteToggle = () => {
+  // Mute toggle handler
+  const handleMuteToggle = useCallback(() => {
     if (isMuted) {
       // Unmute - restore previous volume
       setIsMuted(false);
-      setVolume(previousVolume > 0 ? previousVolume : 50);
-      setGlobalVolume(previousVolume > 0 ? previousVolume / 100 : 0.5);
+      const newVolume = previousVolume > 0 ? previousVolume : 50;
+      setVolume(newVolume);
+      setGlobalVolume(newVolume / 100);
       if (onVolumeChange) {
-        onVolumeChange(previousVolume > 0 ? previousVolume / 100 : 0.5);
+        onVolumeChange(newVolume / 100);
       }
     } else {
       // Mute - save current volume
@@ -137,24 +131,27 @@ export const Controls = ({
         onVolumeChange(0);
       }
     }
-  };
+  }, [isMuted, previousVolume, volume, setGlobalVolume, onVolumeChange]);
 
-  const handleSeekChange = (value) => {
-    setCurrentTime(value);
-    // Update the global current time in the music context
-    if (setGlobalCurrentTime) {
-      setGlobalCurrentTime(value);
-    }
-  };
+  // Seek change handler
+  const handleSeekChange = useCallback(
+    (value) => {
+      setCurrentTime(value);
+      // Update the global current time in the music context
+      if (setGlobalCurrentTime) {
+        setGlobalCurrentTime(value);
+      }
+    },
+    [setGlobalCurrentTime]
+  );
 
-  const formatTime = (seconds) => {
+  // Format time helper
+  const formatTime = useCallback((seconds) => {
     if (isNaN(seconds)) return "0:00";
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
-  };
-
-  const { theme } = useTheme();
+  }, []);
 
   return (
     <div

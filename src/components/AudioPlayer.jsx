@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useMusic } from "../store/MusicContext";
 import { createAudioUrl } from "../utils/audioUtils";
+import { AudioAnalysisService } from "../store/AudioAnalysisService";
 
 /**
  * AudioPlayer component that handles the actual audio playback
@@ -16,6 +17,7 @@ export const AudioPlayer = () => {
     setDuration,
     nextTrack,
     repeat,
+    setAudioData,
   } = useMusic();
 
   const audioRef = useRef(null);
@@ -24,6 +26,8 @@ export const AudioPlayer = () => {
   const [error, setError] = useState(null);
   const [albumArt, setAlbumArt] = useState(null);
   const loadingRef = useRef(false); // Ref to track loading state to prevent race conditions
+  const analyzerInitialized = useRef(false);
+  const animationFrameRef = useRef(null);
 
   // Load audio when track changes
   useEffect(() => {
@@ -70,7 +74,7 @@ export const AudioPlayer = () => {
               album: currentTrack.album || "Unknown Album",
               artwork: [
                 {
-                  src: albumArt || "/images/album-placeholder.svg",
+                  src: currentTrack.imageUrl || "/images/album-placeholder.svg",
                   sizes: "512x512",
                   type: "image/png",
                 },
@@ -96,8 +100,55 @@ export const AudioPlayer = () => {
       if (audioUrl && audioUrl.startsWith("blob:")) {
         URL.revokeObjectURL(audioUrl);
       }
+
+      // Cancel any ongoing animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
   }, [currentTrack]);
+
+  // Initialize audio analyzer when audio element is ready
+  useEffect(() => {
+    if (!audioRef.current || analyzerInitialized.current) return;
+
+    try {
+      AudioAnalysisService.initializeAnalyzer(audioRef.current);
+      analyzerInitialized.current = true;
+      console.log("Audio analyzer initialized");
+    } catch (error) {
+      console.error("Failed to initialize audio analyzer:", error);
+    }
+  }, []);
+
+  // Update audio analysis data in real-time
+  const updateAudioData = useCallback(() => {
+    try {
+      const analysisData = AudioAnalysisService.getRealtimeData();
+      setAudioData(analysisData);
+    } catch (error) {
+      console.error("Error updating audio data:", error);
+    }
+
+    animationFrameRef.current = requestAnimationFrame(updateAudioData);
+  }, [setAudioData]);
+
+  // Start/stop audio analysis based on playback state
+  useEffect(() => {
+    if (!analyzerInitialized.current) return;
+
+    if (isPlaying) {
+      updateAudioData();
+    } else if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, updateAudioData]);
 
   // Handle play/pause - separate from the audio URL effect to avoid race conditions
   useEffect(() => {
@@ -136,17 +187,17 @@ export const AudioPlayer = () => {
   }, [currentTime]);
 
   // Event handlers
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = useCallback(() => {
     if (!audioRef.current) return;
     setCurrentTime(audioRef.current.currentTime);
-  };
+  }, [setCurrentTime]);
 
-  const handleDurationChange = () => {
+  const handleDurationChange = useCallback(() => {
     if (!audioRef.current) return;
     setDuration(audioRef.current.duration || 0);
-  };
+  }, [setDuration]);
 
-  const handleEnded = () => {
+  const handleEnded = useCallback(() => {
     if (repeat) {
       // If repeat is enabled, restart the current track
       if (audioRef.current) {
@@ -159,21 +210,24 @@ export const AudioPlayer = () => {
       // Otherwise, move to the next track
       nextTrack();
     }
-  };
+  }, [repeat, nextTrack]);
 
-  const handleError = (e) => {
-    console.error("Audio playback error:", e);
-    setError(
-      `Audio playback error: ${e.target.error?.message || "Unknown error"}`
-    );
+  const handleError = useCallback(
+    (e) => {
+      console.error("Audio playback error:", e);
+      setError(
+        `Audio playback error: ${e.target.error?.message || "Unknown error"}`
+      );
 
-    // Try to recover by moving to the next track, but only if not already loading
-    if (!loadingRef.current) {
-      setTimeout(() => {
-        nextTrack();
-      }, 2000);
-    }
-  };
+      // Try to recover by moving to the next track, but only if not already loading
+      if (!loadingRef.current) {
+        setTimeout(() => {
+          nextTrack();
+        }, 2000);
+      }
+    },
+    [nextTrack]
+  );
 
   return (
     <div style={{ display: "none" }}>
@@ -182,6 +236,7 @@ export const AudioPlayer = () => {
         ref={audioRef}
         src={audioUrl}
         preload="auto"
+        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={handleDurationChange}
         onEnded={handleEnded}
