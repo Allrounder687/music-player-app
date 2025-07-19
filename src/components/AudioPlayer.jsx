@@ -28,6 +28,7 @@ export const AudioPlayer = () => {
   const loadingRef = useRef(false); // Ref to track loading state to prevent race conditions
   const analyzerInitialized = useRef(false);
   const animationFrameRef = useRef(null);
+  const timeUpdateRef = useRef(null); // Ref to throttle time updates
 
   // Load audio when track changes
   useEffect(() => {
@@ -47,6 +48,11 @@ export const AudioPlayer = () => {
         setError(null);
 
         console.log("Current track:", currentTrack);
+
+        // Show loading notification
+        if (window.showToast) {
+          window.showToast(`Loading: ${currentTrack.title}`, "info", 2000);
+        }
 
         // Determine the source for the audio
         let sourcePath;
@@ -135,6 +141,11 @@ export const AudioPlayer = () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      
+      // Clear time update timeout
+      if (timeUpdateRef.current) {
+        clearTimeout(timeUpdateRef.current);
+      }
     };
   }, [currentTrack]);
 
@@ -206,7 +217,7 @@ export const AudioPlayer = () => {
     audioRef.current.volume = volume;
   }, [volume]);
 
-  // Handle seeking
+  // Handle seeking - improved to prevent excessive updates
   useEffect(() => {
     if (!audioRef.current || !audioRef.current.duration) return;
 
@@ -216,10 +227,18 @@ export const AudioPlayer = () => {
     }
   }, [currentTime]);
 
-  // Event handlers
+  // Event handlers - throttled time updates to prevent excessive state changes
   const handleTimeUpdate = useCallback(() => {
     if (!audioRef.current) return;
-    setCurrentTime(audioRef.current.currentTime);
+    
+    // Throttle time updates to prevent excessive state changes
+    if (timeUpdateRef.current) {
+      clearTimeout(timeUpdateRef.current);
+    }
+    
+    timeUpdateRef.current = setTimeout(() => {
+      setCurrentTime(audioRef.current.currentTime);
+    }, 100); // Update every 100ms instead of every frame
   }, [setCurrentTime]);
 
   const handleDurationChange = useCallback(() => {
@@ -227,7 +246,10 @@ export const AudioPlayer = () => {
     setDuration(audioRef.current.duration || 0);
   }, [setDuration]);
 
+  // Improved track ending handling to prevent loops
   const handleEnded = useCallback(() => {
+    console.log("Track ended");
+    
     if (repeat) {
       // If repeat is enabled, restart the current track
       if (audioRef.current) {
@@ -238,16 +260,23 @@ export const AudioPlayer = () => {
       }
     } else {
       // Otherwise, move to the next track
-      nextTrack();
+      // Add a small delay to prevent rapid-fire track changes
+      setTimeout(() => {
+        nextTrack();
+      }, 100);
     }
   }, [repeat, nextTrack]);
 
   const handleError = useCallback(
     (e) => {
       console.error("Audio playback error:", e);
-      setError(
-        `Audio playback error: ${e.target.error?.message || "Unknown error"}`
-      );
+      const errorMessage = `Audio playback error: ${e.target.error?.message || "Unknown error"}`;
+      setError(errorMessage);
+
+      // Show toast notification
+      if (window.showToast) {
+        window.showToast("Failed to play audio. Skipping to next track...", "error", 3000);
+      }
 
       // Try to recover by moving to the next track, but only if not already loading
       if (!loadingRef.current) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   FaPlay,
   FaPause,
@@ -37,126 +37,68 @@ export const Controls = ({
     audioData,
   } = useMusic();
 
-  const [volume, setVolume] = useState(
-    globalVolume !== undefined ? globalVolume * 100 : 80
-  );
-  const [currentTime, setCurrentTime] = useState(globalCurrentTime || 0);
-  const [duration, setDuration] = useState(trackDuration || 180); // Set a default duration
+  // Use only global state - remove redundant local state
   const [isMuted, setIsMuted] = useState(false);
-  const [previousVolume, setPreviousVolume] = useState(volume);
+  const [previousVolume, setPreviousVolume] = useState(80);
   const { theme } = useTheme();
 
-  // Sync with global current time
-  useEffect(() => {
-    if (globalCurrentTime !== undefined) {
-      setCurrentTime(globalCurrentTime);
-    }
-  }, [globalCurrentTime]);
+  // Convert volume to percentage for UI
+  const volumePercentage = useMemo(() => {
+    return globalVolume !== undefined ? globalVolume * 100 : 80;
+  }, [globalVolume]);
 
-  // Update duration when track changes
-  useEffect(() => {
-    if (trackDuration) {
-      setDuration(trackDuration);
-    }
-  }, [trackDuration]);
+  // Use global duration and current time directly
+  const duration = trackDuration || 180;
+  const currentTime = globalCurrentTime || 0;
 
-  // Sync with global volume
+  // Update mute state when volume changes
   useEffect(() => {
     if (globalVolume !== undefined) {
-      setVolume(globalVolume * 100);
       setIsMuted(globalVolume === 0);
     }
   }, [globalVolume]);
 
-  // Handle end of track with proper dependencies
-  const handleTrackEnd = useCallback(() => {
-    // Check if we're at the end of the track (with a small buffer)
-    if (currentTime >= duration - 0.5 && duration > 0) {
-      console.log("Track ended, moving to next track");
-
-      // If repeat is on, just reset the time and restart playback
-      if (repeat) {
-        console.log("Repeat is on, restarting track");
-        setCurrentTime(0);
-        if (setGlobalCurrentTime) {
-          setGlobalCurrentTime(0);
-        }
-        // Make sure playback continues
-        if (!isPlaying && onPlayPause) {
-          onPlayPause();
-        }
-        return;
-      }
-
-      // Otherwise, move to next track
-      console.log("Moving to next track");
-      setCurrentTime(0);
-      if (setGlobalCurrentTime) {
-        setGlobalCurrentTime(0);
-      }
-      onNext();
-    }
-  }, [
-    currentTime,
-    duration,
-    onNext,
-    setGlobalCurrentTime,
-    repeat,
-    isPlaying,
-    onPlayPause,
-  ]);
-
-  // Use the callback in an effect
-  useEffect(() => {
-    handleTrackEnd();
-  }, [handleTrackEnd]);
-
-  // Volume change handler
+  // Volume change handler - simplified
   const handleVolumeChange = useCallback(
     (value) => {
-      setVolume(value);
+      const volumeValue = value / 100;
       setIsMuted(value === 0);
-      setGlobalVolume(value / 100);
+      setGlobalVolume(volumeValue);
       if (onVolumeChange) {
-        onVolumeChange(value / 100);
+        onVolumeChange(volumeValue);
       }
     },
     [setGlobalVolume, onVolumeChange]
   );
 
-  // Mute toggle handler
+  // Mute toggle handler - simplified
   const handleMuteToggle = useCallback(() => {
     if (isMuted) {
-      // Unmute - restore previous volume
-      setIsMuted(false);
+      // Unmute - restore previous volume or default to 50%
       const newVolume = previousVolume > 0 ? previousVolume : 50;
-      setVolume(newVolume);
+      setIsMuted(false);
       setGlobalVolume(newVolume / 100);
       if (onVolumeChange) {
         onVolumeChange(newVolume / 100);
       }
     } else {
       // Mute - save current volume
-      setPreviousVolume(volume);
+      setPreviousVolume(volumePercentage);
       setIsMuted(true);
-      setVolume(0);
       setGlobalVolume(0);
       if (onVolumeChange) {
         onVolumeChange(0);
       }
     }
-  }, [isMuted, previousVolume, volume, setGlobalVolume, onVolumeChange]);
+  }, [isMuted, previousVolume, volumePercentage, setGlobalVolume, onVolumeChange]);
 
-  // Seek change handler
+  // Seek change handler - simplified to use only global state
   const handleSeekChange = useCallback(
     (value) => {
-      setCurrentTime(value);
-      // Update the global current time in the music context
-      if (setGlobalCurrentTime) {
-        setGlobalCurrentTime(value);
-      }
+      const newTime = (value / 100) * duration;
+      setGlobalCurrentTime(newTime);
     },
-    [setGlobalCurrentTime]
+    [duration, setGlobalCurrentTime]
   );
 
   // Format time helper
@@ -222,10 +164,7 @@ export const Controls = ({
             </button>
             <button
               onClick={() => {
-                setCurrentTime(0);
-                if (setGlobalCurrentTime) {
-                  setGlobalCurrentTime(0);
-                }
+                setGlobalCurrentTime(0);
               }}
               className={`text-${theme.colors.text.muted} hover:text-${theme.colors.text.primary} transition-colors`}
               title="Restart track"
@@ -274,14 +213,14 @@ export const Controls = ({
             >
               {isMuted ? (
                 <FaVolumeMute />
-              ) : volume < 30 ? (
+              ) : volumePercentage < 30 ? (
                 <FaVolumeDown />
               ) : (
                 <FaVolumeUp />
               )}
             </button>
             <Slider
-              value={volume}
+              value={volumePercentage}
               onChange={handleVolumeChange}
               className="h-1"
             />
