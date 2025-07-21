@@ -49,7 +49,7 @@ export const ThemeSelector = ({ compact = false }) => {
   // For compact mode, just show the color indicator
   if (compact) {
     return (
-      <div className="relative" ref={dropdownRef}>
+      <div className="static" ref={dropdownRef}>
         <div
           onClick={toggleDropdown}
           className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center cursor-pointer"
@@ -61,45 +61,34 @@ export const ThemeSelector = ({ compact = false }) => {
 
         {isOpen && (
           <div
-            className="fixed rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+            className="rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-[100]"
             style={{
               backgroundColor: "var(--bg-secondary)",
-              position: "absolute",
-              bottom: "30px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "180px",
+              position: "fixed",
+              top: "auto",
+              left: "20px",
+              width: "200px",
+              marginTop: "10px",
             }}
           >
-            <div className="py-2 grid grid-cols-3 gap-2 p-3" role="menu">
+            <div className="py-2 p-3" role="menu">
               {availableThemes.map((theme) => (
                 <div
                   key={theme.id}
                   onClick={() => handleThemeChange(theme.id)}
-                  className={`w-full h-8 rounded flex items-center justify-center cursor-pointer ${
-                    currentTheme === theme.id ? "ring-2 ring-white" : ""
-                  }`}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between cursor-pointer mb-1 rounded ${
+                    currentTheme === theme.id ? "ring-1 ring-white" : ""
+                  } hover:bg-gray-700`}
                   role="menuitem"
                   title={theme.name}
                   style={{
-                    backgroundColor: `var(--${
-                      theme.id === "default"
-                        ? "accent-color"
-                        : theme.id === "royalBlue"
-                        ? "blue-600"
-                        : theme.id === "crimsonDesert"
-                        ? "red-600"
-                        : theme.id === "black"
-                        ? "gray-800"
-                        : theme.id === "midnightBlack"
-                        ? "indigo-500"
-                        : "emerald-500"
-                    })`,
+                    color: "var(--text-primary)",
                   }}
                 >
-                  <div
+                  <span>{theme.name}</span>
+                  <span
                     className={`h-4 w-4 rounded-full ${themeColors[theme.id]}`}
-                  ></div>
+                  ></span>
                 </div>
               ))}
             </div>
@@ -123,25 +112,23 @@ export const ThemeSelector = ({ compact = false }) => {
 
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+          className="rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-[100]"
           style={{
             backgroundColor: "var(--bg-secondary)",
             position: "absolute",
             top: "100%",
             right: "-10px",
-            width: "180px",
+            width: "200px",
           }}
         >
-          <div className="py-1" role="menu" aria-orientation="vertical">
+          <div className="py-2 p-2" role="menu" aria-orientation="vertical">
             {availableThemes.map((theme) => (
               <div
                 key={theme.id}
                 onClick={() => handleThemeChange(theme.id)}
-                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between cursor-pointer ${
-                  currentTheme === theme.id
-                    ? "bg-opacity-30 text-white"
-                    : "text-gray-300 hover:bg-gray-700"
-                }`}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between cursor-pointer mb-1 rounded ${
+                  currentTheme === theme.id ? "ring-1 ring-white" : ""
+                } hover:bg-gray-700`}
                 role="menuitem"
                 style={{
                   backgroundColor:
@@ -156,7 +143,7 @@ export const ThemeSelector = ({ compact = false }) => {
               >
                 <span>{theme.name}</span>
                 <span
-                  className={`h-3 w-3 rounded-full ${themeColors[theme.id]}`}
+                  className={`h-4 w-4 rounded-full ${themeColors[theme.id]}`}
                 ></span>
               </div>
             ))}

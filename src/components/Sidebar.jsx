@@ -99,23 +99,29 @@ export const Sidebar = ({ isVisible, toggleSidebar }) => {
           <div className={`mb-3 flex ${isVisible ? "" : "justify-center"}`}>
             {isVisible ? (
               <div
-                className="flex items-center w-full p-2 rounded-lg hover:bg-gray-700 transition-colors relative"
-                style={{ color: "var(--text-secondary)" }}
+                className="flex items-center w-full p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                style={{
+                  color: "var(--text-secondary)",
+                  position: "relative",
+                }}
               >
                 <FaPalette className="mr-3" />
                 <span>Theme</span>
-                <div className="ml-auto z-50" style={{ position: "relative" }}>
+                <div className="ml-auto" style={{ position: "static" }}>
                   <ThemeSelector />
                 </div>
               </div>
             ) : (
               <div
-                className="p-2 rounded-lg hover:bg-gray-700 transition-colors relative"
-                style={{ color: "var(--text-secondary)" }}
+                className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                style={{
+                  color: "var(--text-secondary)",
+                  position: "relative",
+                }}
                 title="Change Theme"
               >
                 <FaPalette />
-                <div className="mt-1 z-50" style={{ position: "relative" }}>
+                <div className="mt-1" style={{ position: "static" }}>
                   <ThemeSelector compact={true} />
                 </div>
               </div>
