@@ -24,7 +24,7 @@ export const AudioPlayer = () => {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [albumArt, setAlbumArt] = useState(null);
+
   const loadingRef = useRef(false); // Ref to track loading state to prevent race conditions
   const analyzerInitialized = useRef(false);
   const animationFrameRef = useRef(null);
@@ -80,13 +80,7 @@ export const AudioPlayer = () => {
         const url = await createAudioUrl(sourcePath);
         console.log(`Created audio URL: ${url}`);
 
-        // Set album art if available
-        if (currentTrack.imageUrl) {
-          setAlbumArt(currentTrack.imageUrl);
-        } else {
-          // Use a static placeholder instead of dynamic unsplash URLs
-          setAlbumArt("/images/album-placeholder.svg");
-        }
+        // Album art is handled by the MediaMetadata below
 
         // Set the audio URL last to ensure everything else is ready
         setAudioUrl(url);
@@ -151,34 +145,45 @@ export const AudioPlayer = () => {
     }
   }, []);
 
-  // Update audio analysis data in real-time
-  const updateAudioData = useCallback(() => {
-    try {
-      const analysisData = AudioAnalysisService.getRealtimeData();
-      setAudioData(analysisData);
-    } catch (error) {
-      console.error("Error updating audio data:", error);
-    }
-
-    animationFrameRef.current = requestAnimationFrame(updateAudioData);
-  }, [setAudioData]);
-
-  // Start/stop audio analysis based on playback state
+  // Audio analysis with simplified approach to prevent infinite loops
   useEffect(() => {
-    if (!analyzerInitialized.current) return;
+    // Always provide default audio data to prevent undefined errors
+    const defaultAudioData = {
+      bass: 0,
+      mid: 0,
+      treble: 0,
+      volume: 0,
+      frequencyData: new Uint8Array(128).fill(0),
+      timeData: new Uint8Array(128).fill(0),
+    };
 
-    if (isPlaying) {
-      updateAudioData();
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
+    setAudioData(defaultAudioData);
+
+    // Only attempt audio analysis if playing and analyzer is initialized
+    if (!analyzerInitialized.current || !isPlaying) {
+      return;
     }
+
+    // Use a simple interval instead of requestAnimationFrame to reduce CPU usage
+    const intervalId = setInterval(() => {
+      try {
+        const analysisData = AudioAnalysisService.getRealtimeData();
+        if (analysisData && typeof analysisData === "object") {
+          setAudioData(analysisData);
+        }
+      } catch (error) {
+        console.error("Error updating audio data:", error);
+      }
+    }, 100); // Update at 10fps instead of 60fps
 
     return () => {
+      clearInterval(intervalId);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, updateAudioData]);
+  }, [isPlaying]); // Only depend on isPlaying
 
   // Handle play/pause - separate from the audio URL effect to avoid race conditions
   useEffect(() => {

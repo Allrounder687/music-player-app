@@ -48,7 +48,7 @@ function createWindow() {
 
   // Load the app
   if (isDev) {
-    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:3001"); // Updated to port 3001
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));

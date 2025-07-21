@@ -7,13 +7,10 @@ export const SnakeSeekbar = ({
   duration,
   onChange,
   className = "",
-  audioData: propAudioData, // Renamed to avoid conflict
   ...props
 }) => {
   const { theme } = useTheme();
-  // Use audioData from props if provided, otherwise from context
-  const { audioData: contextAudioData } = useMusic();
-  const audioData = propAudioData || contextAudioData;
+  const { audioData } = useMusic();
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [wavePoints, setWavePoints] = useState([]);
@@ -22,7 +19,7 @@ export const SnakeSeekbar = ({
 
   const seekbarRef = useRef(null);
   const animationRef = useRef(null);
-  const wavePointCount = 40; // Reduced from 80 for better performance
+  const wavePointCount = 80; // Number of points for the wave pattern
 
   // Initialize wave points
   useEffect(() => {
@@ -104,7 +101,6 @@ export const SnakeSeekbar = ({
   }, []);
 
   // Update wave points based on current time
-  // FIX: Removed getWaveYPosition and updateWavePoints from dependencies to break the infinite loop
   useEffect(() => {
     if (!isDragging && duration > 0) {
       // Ensure we don't divide by zero and handle edge cases
@@ -129,43 +125,28 @@ export const SnakeSeekbar = ({
 
       setHeadPosition({ x: headX, y: headY, angle });
     }
-  }, [currentTime, duration, isDragging]);
+  }, [currentTime, duration, isDragging, getWaveYPosition, updateWavePoints]);
 
   // Get audio-reactive amplitude based on frequency data
   const getAudioAmplitude = useCallback(() => {
-    try {
-      if (!audioData || typeof audioData !== "object") {
-        return 1; // Default amplitude if no audio data
-      }
-
-      const { bass = 0, mid = 0, treble = 0 } = audioData;
-
-      // Validate audio data values
-      if (
-        typeof bass !== "number" ||
-        typeof mid !== "number" ||
-        typeof treble !== "number"
-      ) {
-        return 1;
-      }
-
-      // Use bass for more pronounced effect, with mid and treble for detail
-      const bassWeight = 0.6;
-      const midWeight = 0.3;
-      const trebleWeight = 0.1;
-
-      // Calculate weighted average with safety checks
-      const amplitude = Math.max(
-        0,
-        (bass * bassWeight + mid * midWeight + treble * trebleWeight) * 2
-      );
-
-      // Ensure amplitude is at least 1 and at most 5
-      return Math.max(1, Math.min(5, amplitude || 1));
-    } catch (error) {
-      console.warn("Error calculating audio amplitude:", error);
-      return 1;
+    if (!audioData || !audioData.bass) {
+      return 1; // Default amplitude if no audio data
     }
+
+    // Use bass for more pronounced effect, with mid and treble for detail
+    const bassWeight = 0.6;
+    const midWeight = 0.3;
+    const trebleWeight = 0.1;
+
+    // Calculate weighted average
+    const amplitude =
+      (audioData.bass * bassWeight +
+        audioData.mid * midWeight +
+        audioData.treble * trebleWeight) *
+      2; // Multiply by 2 to make the effect more visible
+
+    // Ensure amplitude is at least 1 and at most 5
+    return Math.max(1, Math.min(5, amplitude));
   }, [audioData]);
 
   // Animate wave points
@@ -180,32 +161,10 @@ export const SnakeSeekbar = ({
     });
   }, [getAudioAmplitude, getWaveYPosition]);
 
-  // Animation loop for wave animation - only when audio is playing
+  // Animation loop for wave animation
   useEffect(() => {
-    // Only animate when there's meaningful audio data
-    const shouldAnimate =
-      audioData && (audioData.volume > 0.01 || audioData.bass > 0.01);
-
-    if (!shouldAnimate) {
-      // Set static wave when not animating
-      setWavePoints((prev) =>
-        prev.map((point, index) => ({
-          ...point,
-          y: getWaveYPosition(point.x, index, 1),
-        }))
-      );
-      return;
-    }
-
-    let lastFrameTime = 0;
-    const targetFPS = 30; // Reduce from 60fps to 30fps
-    const frameInterval = 1000 / targetFPS;
-
-    const animate = (currentTime) => {
-      if (currentTime - lastFrameTime >= frameInterval) {
-        animateWave();
-        lastFrameTime = currentTime;
-      }
+    const animate = () => {
+      animateWave();
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -217,7 +176,7 @@ export const SnakeSeekbar = ({
         animationRef.current = null;
       }
     };
-  }, [animateWave, audioData]);
+  }, [animateWave]);
 
   // Handle mouse events
   const handleMouseDown = useCallback((e) => {
@@ -436,5 +395,3 @@ export const SnakeSeekbar = ({
     </div>
   );
 };
-
-// PropTypes removed to fix build error
