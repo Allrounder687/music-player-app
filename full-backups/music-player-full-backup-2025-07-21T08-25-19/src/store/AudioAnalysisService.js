@@ -14,14 +14,6 @@ export class AudioAnalysisService {
   static trebleValue = 0;
   static overallVolume = 0;
   static smoothingFactor = 0.8; // For smoother transitions
-  static beatDetector = {
-    threshold: 0.15,
-    previousBassValue: 0,
-    beatDetected: false,
-    lastBeatTime: 0,
-    energyHistory: Array(20).fill(0),
-    beatHistory: Array(30).fill(false),
-  };
 
   /**
    * Initialize the audio analyzer
@@ -38,8 +30,8 @@ export class AudioAnalysisService {
       // Create analyzer if it doesn't exist
       if (!this.analyzer) {
         this.analyzer = this.audioContext.createAnalyser();
-        this.analyzer.fftSize = 512; // Increased for better frequency resolution
-        this.analyzer.smoothingTimeConstant = 0.7; // Slightly reduced for more responsive beats
+        this.analyzer.fftSize = 256; // Must be a power of 2
+        this.analyzer.smoothingTimeConstant = 0.8; // Smooth out the data
 
         const bufferLength = this.analyzer.frequencyBinCount;
         this.frequencyData = new Uint8Array(bufferLength);
@@ -64,57 +56,6 @@ export class AudioAnalysisService {
   }
 
   /**
-   * Detect beats in the audio signal
-   * @param {number} bassValue - Current bass value
-   * @returns {boolean} - Whether a beat was detected
-   */
-  static detectBeat(bassValue) {
-    const now = Date.now();
-    const minTimeBetweenBeats = 100; // ms
-
-    // Add current energy to history
-    this.beatDetector.energyHistory.shift();
-    this.beatDetector.energyHistory.push(bassValue);
-
-    // Calculate local average (excluding current value)
-    const localAverage = this.beatDetector.energyHistory
-      .slice(0, -1)
-      .reduce((sum, val) => sum + val, 0) / (this.beatDetector.energyHistory.length - 1);
-
-    // Calculate variance
-    const variance = this.beatDetector.energyHistory
-      .slice(0, -1)
-      .reduce((sum, val) => sum + Math.pow(val - localAverage, 2), 0) /
-      (this.beatDetector.energyHistory.length - 1);
-
-    // Dynamic threshold based on local average and variance
-    const dynamicThreshold = localAverage + Math.sqrt(variance) * 1.5;
-
-    // Beat detection with time constraint
-    const isBeat =
-      bassValue > Math.max(this.beatDetector.threshold, dynamicThreshold) &&
-      bassValue > this.beatDetector.previousBassValue * 1.1 &&
-      now - this.beatDetector.lastBeatTime > minTimeBetweenBeats;
-
-    if (isBeat) {
-      this.beatDetector.lastBeatTime = now;
-      this.beatDetector.beatDetected = true;
-
-      // Update beat history
-      this.beatDetector.beatHistory.shift();
-      this.beatDetector.beatHistory.push(true);
-    } else {
-      this.beatDetector.beatHistory.shift();
-      this.beatDetector.beatHistory.push(false);
-    }
-
-    // Update previous value
-    this.beatDetector.previousBassValue = bassValue;
-
-    return isBeat;
-  }
-
-  /**
    * Get real-time analysis data for the current playback
    * @returns {AudioAnalysisData} - Analysis data for the current position
    */
@@ -125,8 +66,6 @@ export class AudioAnalysisService {
         mid: 0,
         treble: 0,
         volume: 0,
-        beatDetected: false,
-        beatConfidence: 0,
         frequencyData: new Uint8Array(128).fill(0),
         timeData: new Uint8Array(128).fill(0),
       };
@@ -138,9 +77,9 @@ export class AudioAnalysisService {
       this.analyzer.getByteTimeDomainData(this.timeData);
 
       // Calculate bass (0-60Hz), mid (60-2kHz), and treble (2kHz-20kHz) values
-      // For a 44.1kHz sample rate with fftSize of 512, each bin represents ~86Hz
-      const bassEnd = 4; // ~344Hz
-      const midEnd = 24; // ~2064Hz
+      // For a 44.1kHz sample rate with fftSize of 256, each bin represents ~172Hz
+      const bassEnd = 2; // ~344Hz
+      const midEnd = 12; // ~2064Hz
 
       let bassSum = 0;
       let midSum = 0;
@@ -189,20 +128,11 @@ export class AudioAnalysisService {
         this.smoothingFactor * this.overallVolume +
         (1 - this.smoothingFactor) * newVolumeValue;
 
-      // Detect beats
-      const beatDetected = this.detectBeat(this.bassValue);
-
-      // Calculate beat confidence based on recent beat history
-      const beatConfidence = this.beatDetector.beatHistory.filter(Boolean).length /
-        this.beatDetector.beatHistory.length;
-
       return {
         bass: this.bassValue,
         mid: this.midValue,
         treble: this.trebleValue,
         volume: this.overallVolume,
-        beatDetected,
-        beatConfidence,
         frequencyData: [...this.frequencyData],
         timeData: [...this.timeData],
       };
@@ -213,8 +143,6 @@ export class AudioAnalysisService {
         mid: 0,
         treble: 0,
         volume: 0,
-        beatDetected: false,
-        beatConfidence: 0,
         frequencyData: new Uint8Array(128).fill(0),
         timeData: new Uint8Array(128).fill(0),
       };

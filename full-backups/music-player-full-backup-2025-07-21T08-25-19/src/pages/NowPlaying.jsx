@@ -1,14 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { useMusic } from "../store/MusicContext";
 import { Controls } from "../components/Controls";
-import { BeatVisualizer } from "../components/BeatVisualizer";
-import {
-  FaHeart,
-  FaRegHeart,
-  FaEllipsisH,
-  FaMusic,
-  FaChartBar,
-} from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaEllipsisH, FaMusic } from "react-icons/fa";
 
 export const NowPlaying = () => {
   const {
@@ -23,8 +16,6 @@ export const NowPlaying = () => {
     toggleFavorite,
     playTrack,
   } = useMusic();
-
-  const [showVisualizer, setShowVisualizer] = useState(false);
 
   // No need for audio element references or effects as they're handled by AudioPlayer component
 
@@ -81,41 +72,22 @@ export const NowPlaying = () => {
     <div className="h-full flex flex-col">
       {/* Main content */}
       <div className="flex-1 flex flex-col md:flex-row p-4 overflow-hidden">
-        {/* Album Art or Visualizer */}
+        {/* Album Art */}
         <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 mb-4 md:mb-0 md:mr-6">
-          <div className="aspect-square bg-gray-700 rounded-lg overflow-hidden shadow-lg relative">
-            {showVisualizer && isPlaying ? (
-              <BeatVisualizer className="w-full h-full" />
-            ) : (
-              <>
-                {currentTrack?.imageUrl ? (
-                  <img
-                    src={currentTrack.imageUrl}
-                    alt={currentTrack.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 to-gray-800">
-                    <span className="text-3xl text-gray-400">
-                      {currentTrack?.title?.[0] || "♫"}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Toggle visualizer button */}
-            <button
-              onClick={() => setShowVisualizer(!showVisualizer)}
-              className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-              title={showVisualizer ? "Show album art" : "Show visualizer"}
-            >
-              <FaChartBar
-                className={`${
-                  showVisualizer ? "text-purple-400" : "text-white"
-                }`}
+          <div className="aspect-square bg-gray-700 rounded-lg overflow-hidden shadow-lg">
+            {currentTrack?.imageUrl ? (
+              <img
+                src={currentTrack.imageUrl}
+                alt={currentTrack.title}
+                className="w-full h-full object-cover"
               />
-            </button>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 to-gray-800">
+                <span className="text-3xl text-gray-400">
+                  {currentTrack?.title?.[0] || "♫"}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

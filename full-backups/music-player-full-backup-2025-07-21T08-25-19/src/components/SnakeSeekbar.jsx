@@ -37,63 +37,44 @@ export const SnakeSeekbar = ({
     setWavePoints(initialWavePoints);
   }, [wavePointCount]);
 
-  // Calculate Y position for wave points with audio reactivity - enhanced for better visualization
+  // Calculate Y position for wave points with audio reactivity - memoized to avoid dependency issues
   const getWaveYPosition = useCallback(
     (x, index, audioAmplitude = 1) => {
       // Base amplitude for the wave
       const baseAmplitude = 2;
 
-      // Apply audio reactivity to the amplitude with stronger effect
-      const amplitude = baseAmplitude * audioAmplitude * 1.5;
+      // Apply audio reactivity to the amplitude
+      const amplitude = baseAmplitude * audioAmplitude;
 
       // Create a more pronounced wave effect
       const frequency = 0.15; // Frequency for waves
-      const phase = Date.now() * 0.001; // Animation speed
+      const phase = Date.now() * 0.001; // Animation speed - kept faster from previous changes
       const offset = index * 0.02; // Offset based on index for varied wave
 
       // Use audio data to influence the wave if available
       let frequencyModulation = 1;
       let phaseModulation = 0;
-      let beatAmplification = 1;
 
-      if (audioData && typeof audioData === "object") {
-        // Beat detection for more dramatic effect
-        if (audioData.beatDetected) {
-          beatAmplification = 1.5; // Amplify waves on beats
-        }
+      if (
+        audioData &&
+        audioData.frequencyData &&
+        audioData.frequencyData.length > 0
+      ) {
+        // Use frequency data to modulate the wave
+        const freqIndex = Math.floor(
+          (x / 100) * (audioData.frequencyData.length / 2)
+        );
+        if (freqIndex < audioData.frequencyData.length) {
+          // Normalize to 0-1 range and add small offset to avoid flat lines
+          frequencyModulation =
+            (audioData.frequencyData[freqIndex] / 255) * 0.5 + 0.5;
 
-        if (audioData.frequencyData && audioData.frequencyData.length > 0) {
-          // Use frequency data to modulate the wave
-          const freqIndex = Math.floor(
-            (x / 100) * (audioData.frequencyData.length / 2)
-          );
-          if (freqIndex < audioData.frequencyData.length) {
-            // Normalize to 0-1 range and add small offset to avoid flat lines
-            frequencyModulation =
-              (audioData.frequencyData[freqIndex] / 255) * 0.7 + 0.5;
-          }
-        }
-
-        // Use bass/mid/treble to influence phase and create more dynamic waves
-        if (
-          typeof audioData.bass === "number" &&
-          typeof audioData.mid === "number" &&
-          typeof audioData.treble === "number"
-        ) {
-          // Different parts of the wave react to different frequencies
-          let frequencyFactor;
-          if (x < 33) {
-            // First third reacts more to bass
-            frequencyFactor = audioData.bass * 0.7 + audioData.mid * 0.3;
-          } else if (x < 66) {
-            // Middle third reacts to mid frequencies
-            frequencyFactor = audioData.mid * 0.7 + audioData.treble * 0.3;
-          } else {
-            // Last third reacts to treble
-            frequencyFactor = audioData.treble * 0.7 + audioData.mid * 0.3;
-          }
-
-          phaseModulation = frequencyFactor * Math.PI;
+          // Use bass/mid/treble to influence phase
+          phaseModulation =
+            (audioData.bass * 0.5 +
+              audioData.mid * 0.3 +
+              audioData.treble * 0.2) *
+            Math.PI;
         }
       }
 
@@ -101,17 +82,11 @@ export const SnakeSeekbar = ({
       const wave1 =
         Math.sin(x * frequency + phase + offset + phaseModulation) *
         amplitude *
-        frequencyModulation *
-        beatAmplification;
-
+        frequencyModulation;
       const wave2 =
         Math.sin(x * frequency * 0.5 + phase * 1.3) * (amplitude * 0.3);
 
-      // Add a third wave component for more complexity
-      const wave3 =
-        Math.sin(x * frequency * 0.25 + phase * 0.7) * (amplitude * 0.15);
-
-      return wave1 + wave2 + wave3;
+      return wave1 + wave2;
     },
     [audioData]
   );
@@ -376,23 +351,13 @@ export const SnakeSeekbar = ({
     return path;
   }, []);
 
-  // Get audio-reactive glow intensity - enhanced reactivity
+  // Get audio-reactive glow intensity
   const getGlowIntensity = useCallback(() => {
     if (!audioData || !audioData.volume) return 0.7;
-
-    // Base glow
-    const baseGlow = 0.5;
-
-    // Enhanced reactivity with more emphasis on beats and bass
-    const bassGlow = audioData.bass * 0.8;
-    const beatGlow = audioData.beatDetected ? 0.3 : 0;
-    const volumeGlow = audioData.volume * 0.4;
-
-    // Combine for more dynamic response
-    return baseGlow + bassGlow + beatGlow + volumeGlow;
+    return 0.5 + audioData.volume * 0.5; // Scale between 0.5 and 1.0
   }, [audioData]);
 
-  // Get stroke width based on audio intensity - enhanced reactivity
+  // Get stroke width based on audio intensity
   const getStrokeWidth = useCallback(
     (isActive) => {
       if (!audioData || !audioData.volume) return isActive ? 2 : 1.5;
@@ -400,15 +365,10 @@ export const SnakeSeekbar = ({
       // Base width
       const baseWidth = isActive ? 2 : 1.5;
 
-      // Add audio reactivity with more emphasis on bass for beats
-      const bassFactor = audioData.bass * 2.5; // More weight to bass
-      const volumeFactor = audioData.volume * 1.2; // General volume
-      const beatFactor = audioData.beatDetected ? 1.5 : 1; // Extra emphasis on beats
+      // Add audio reactivity
+      const audioFactor = 1 + audioData.volume * 1.5; // Scale between 1 and 2.5
 
-      // Combine factors for more dynamic response
-      const audioFactor = 1 + Math.max(bassFactor, volumeFactor) * beatFactor;
-
-      return baseWidth * Math.min(4, audioFactor); // Cap at 4x to avoid excessive thickness
+      return baseWidth * audioFactor;
     },
     [audioData]
   );
@@ -432,14 +392,15 @@ export const SnakeSeekbar = ({
         viewBox="0 0 100 16"
         preserveAspectRatio="none"
       >
-        {/* Single unified wave path with clip path for progress */}
-        <defs>
-          <clipPath id="progress-clip">
-            <rect x="0" y="0" width={`${progress}`} height="16" />
-          </clipPath>
-        </defs>
+        {/* Background line */}
+        <path
+          d={createWavePath(wavePoints)}
+          stroke="rgba(255, 255, 255, 0.1)"
+          strokeWidth="1"
+          fill="none"
+        />
 
-        {/* Background wave (inactive) */}
+        {/* Inactive wave path */}
         <path
           d={createWavePath(wavePoints)}
           stroke={getThemeColor(0.2, false)}
@@ -447,35 +408,20 @@ export const SnakeSeekbar = ({
           fill="none"
         />
 
-        {/* Active wave path (clipped to progress) */}
+        {/* Active wave path */}
         <path
-          d={createWavePath(wavePoints)}
+          d={createWavePath(activePoints)}
           stroke={getThemeColor(0.9, true)}
           strokeWidth={getStrokeWidth(true)}
           fill="none"
-          clipPath="url(#progress-clip)"
           style={{
             filter: `drop-shadow(0 0 ${
               getGlowIntensity() * 3
             }px ${getThemeColor(getGlowIntensity(), true)})`,
-            transition: audioData?.beatDetected
-              ? "all 0.1s ease-out"
-              : "all 0.3s ease",
           }}
         />
 
-        {/* Beat indicator at current position */}
-        {audioData?.beatDetected && (
-          <circle
-            cx={headPosition.x}
-            cy={8}
-            r="2"
-            fill={getThemeColor(0.8, true)}
-            style={{
-              filter: `drop-shadow(0 0 4px ${getThemeColor(0.9, true)})`,
-            }}
-          />
-        )}
+        {/* Snake head removed */}
       </svg>
 
       {/* Hover tooltip */}

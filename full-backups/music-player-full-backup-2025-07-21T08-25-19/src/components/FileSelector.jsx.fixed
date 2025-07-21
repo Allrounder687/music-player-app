@@ -1,0 +1,336 @@
+import React, { useState } from "react";
+import { FaFolder, FaMusic, FaPlay, FaSpinner } from "react-icons/fa";
+import { useMusic } from "../store/MusicContext";
+import { useTheme } from "../store/ThemeContext";
+import { extractMetadata, generatePlaceholderImage } from "../utils/audioUtils";
+
+export const FileSelector = ({ onClose }) => {
+  const { setQueue } = useMusic();
+  const { theme } = useTheme();
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [folders, setFolders] = useState([]);
+  const [expandedFolders, setExpandedFolders] = useState({});
+
+  const toggleFolder = (folderId) => {
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [folderId]: !prev[folderId],
+    }));
+  };
+
+  const toggleFileSelection = (fileId) => {
+    setSelectedFiles((prev) =>
+      prev.includes(fileId)
+        ? prev.filter((id) => id !== fileId)
+        : [...prev, fileId]
+    );
+  };
+
+  const handleAddToQueue = () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsLoading(true);
+
+    // Find all selected files across all folders
+    const selectedSongs = [];
+    folders.forEach((folder) => {
+      folder.children.forEach((file) => {
+        if (selectedFiles.includes(file.id)) {
+          // Create a song object from the file
+          selectedSongs.push({
+            id: file.id,
+            title: file.name.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+            artist: "Unknown Artist",
+            album: folder.name,
+            duration: 180, // Default duration
+            imageUrl: "/images/album-placeholder.svg", // Default image
+            path: file.path,
+            // Use the actual file path for local playback
+            previewUrl: file.path
+          });
+        }
+      });
+    });
+
+    console.log("Adding songs to queue:", selectedSongs);
+
+    // Add selected songs to queue
+    setQueue(selectedSongs, true);
+    setIsLoading(false);
+    onClose();
+  };
+
+  const handleOpenFolder = async () => {
+    try {
+      // Check if we're running in Electron
+      if (window.electron?.fs?.openDialog) {
+        setIsLoading(true);
+        
+        try {
+          const result = await window.electron.fs.openDialog({
+            properties: ["openFile", "multiSelections"],
+            filters: [
+              { name: "Audio Files", extensions: ["mp3", "wav", "ogg", "m4a", "flac"] }
+            ]
+          });
+
+          if (!result.canceled && result.files && result.files.length > 0) {
+            // Create a new folder for the selected files
+            const newFolder = {
+              id: `folder-${Date.now()}`,
+              name: "Selected Files",
+              type: "folder",
+              children: result.files.map((file, index) => ({
+                id: `file-${Date.now()}-${index}`,
+                name: file.name,
+                type: "file",
+                path: file.path,
+                size: file.size,
+                lastModified: file.lastModified
+              }))
+            };
+
+            // Add the new folder to our folders list
+            setFolders(prev => [...prev, newFolder]);
+
+            // Expand the new folder
+            setExpandedFolders(prev => ({
+              ...prev,
+              [newFolder.id]: true
+            }));
+
+            // Select all the new files
+            setSelectedFiles(newFolder.children.map(file => file.id));
+            
+            // Process the selected files with metadata extraction
+            const processFiles = async () => {
+              try {
+                // Process files and extract metadata
+                const selectedSongsPromises = newFolder.children.map(async (file) => {
+                  // Extract metadata from the file
+                  const metadata = await extractMetadata(file.path);
+                  
+                  return {
+                    id: file.id,
+                    title: metadata.title || file.name.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+                    artist: metadata.artist || "Unknown Artist",
+                    album: metadata.album || "Selected Files",
+                    duration: metadata.duration || 180, // Default duration
+                    imageUrl: metadata.imageUrl || generatePlaceholderImage(metadata.title),
+                    path: file.path,
+                    // Use the actual file path for local playback
+                    previewUrl: file.path
+                  };
+                });
+                
+                const selectedSongs = await Promise.all(selectedSongsPromises);
+                
+                // Add selected songs to queue and play them
+                setQueue(selectedSongs, true);
+                setIsLoading(false);
+                onClose();
+              } catch (metadataError) {
+                console.error("Error processing metadata:", metadataError);
+                
+                // Fallback to basic song objects without metadata
+                const basicSongs = newFolder.children.map(file => ({
+                  id: file.id,
+                  title: file.name.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+                  artist: "Unknown Artist",
+                  album: "Selected Files",
+                  duration: 180, // Default duration
+                  imageUrl: "/images/album-placeholder.svg",
+                  path: file.path,
+                  previewUrl: file.path
+                }));
+                
+                setQueue(basicSongs, true);
+                setIsLoading(false);
+                onClose();
+              }
+            };
+            
+            // Execute the async function
+            processFiles();
+          } else {
+            setIsLoading(false);
+          }
+        } catch (dialogError) {
+          console.error("Error in dialog API:", dialogError);
+          alert(`Error using file dialog: ${dialogError.message}`);
+          setIsLoading(false);
+        }
+      } else {
+        // Fallback for web or when not running in Electron
+        alert("This feature requires the Electron app. Please run the desktop version.");
+      }
+    } catch (error) {
+      console.error("Error opening file dialog:", error);
+      alert(`Error opening file dialog: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className={`bg-${theme?.colors?.background?.secondary || "gray-800"} rounded-lg shadow-xl w-full max-w-2xl`}>
+        <div className={`flex justify-between items-center p-4 border-b border-${theme?.colors?.border || "gray-700"}`}>
+          <h2 className={`text-lg font-semibold text-${theme?.colors?.text?.primary || "white"}`}>
+            Select Music Files
+          </h2>
+          <button
+            onClick={onClose}
+            className={`text-${theme?.colors?.text?.muted || "gray-400"} hover:text-${theme?.colors?.text?.primary || "white"}`}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-4">
+          <button
+            onClick={handleOpenFolder}
+            disabled={isLoading}
+            className={`mb-4 flex items-center px-4 py-2 bg-${theme?.colors?.primary?.main || "purple-600"} hover:bg-${theme?.colors?.primary?.light || "purple-500"} rounded-md text-${theme?.colors?.text?.primary || "white"} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </>
+            ) : (
+              <>
+                <FaFolder className="mr-2" />
+                Select Audio Files
+              </>
+            )}
+          </button>
+
+          {folders.length > 0 && (
+            <div className={`max-h-96 overflow-y-auto border border-${theme?.colors?.border || "gray-700"} rounded-md`}>
+              {folders.map((folder) => (
+                <div key={folder.id} className={`border-b border-${theme?.colors?.border || "gray-700"} last:border-b-0`}>
+                  <div
+                    className={`flex items-center p-2 cursor-pointer hover:bg-${theme?.colors?.background?.tertiary || "gray-700"}`}
+                    onClick={() => toggleFolder(folder.id)}
+                  >
+                    <span className="mr-2 text-xs">
+                      {expandedFolders[folder.id] ? "▼" : "►"}
+                    </span>
+                    <FaFolder className="mr-2 text-yellow-500" />
+                    <span>{folder.name}</span>
+                  </div>
+
+                  {expandedFolders[folder.id] && (
+                    <div className="pl-8">
+                      {folder.children.map((file) => (
+                        <div
+                          key={file.id}
+                          className={`flex items-center p-2 cursor-pointer ${
+                            selectedFiles.includes(file.id)
+                              ? `bg-${theme?.colors?.background?.tertiary || "gray-600"}`
+                              : `hover:bg-${theme?.colors?.background?.tertiary || "gray-700"}`
+                          }`}
+                        >
+                          <div className="flex-1 flex items-center" onClick={() => toggleFileSelection(file.id)}>
+                            <FaMusic className={`mr-2 text-${theme?.colors?.primary?.light || "blue-400"}`} />
+                            <span>{file.name}</span>
+                          </div>
+
+                          <div className="flex items-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Play this single file immediately
+                                const song = {
+                                  id: file.id,
+                                  title: file.name.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+                                  artist: "Unknown Artist",
+                                  album: folder.name,
+                                  duration: 180,
+                                  imageUrl: "/images/album-placeholder.svg",
+                                  path: file.path,
+                                  previewUrl: file.path
+                                };
+
+                                console.log("Playing single song:", song);
+                                setQueue([song], true);
+                                onClose();
+                              }}
+                              className={`mr-2 p-1 rounded-full text-${theme?.colors?.primary?.main || "purple-500"} hover:bg-${theme?.colors?.background?.tertiary || "gray-700"}`}
+                              title="Play now"
+                            >
+                              <FaPlay className="h-3 w-3" />
+                            </button>
+
+                            <input
+                              type="checkbox"
+                              className="ml-auto"
+                              checked={selectedFiles.includes(file.id)}
+                              onChange={() => toggleFileSelection(file.id)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {folders.length === 0 && !isLoading && (
+            <div className={`p-8 text-center text-${theme?.colors?.text?.muted || "gray-400"}`}>
+              <FaMusic className="mx-auto mb-2 text-4xl" />
+              <p>No audio files selected</p>
+              <p className="text-sm mt-2">Click "Select Audio Files" to browse your computer for music</p>
+            </div>
+          )}
+        </div>
+
+        <div className={`flex justify-between p-4 border-t border-${theme?.colors?.border || "gray-700"}`}>
+          <div>
+            <span className={`text-sm text-${theme?.colors?.text?.muted || "gray-400"}`}>
+              {selectedFiles.length} files selected
+            </span>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={onClose}
+              className={`px-4 py-2 bg-${theme?.colors?.background?.tertiary || "gray-700"} hover:bg-${theme?.colors?.background?.tertiary || "gray-600"} rounded-md text-${theme?.colors?.text?.primary || "white"}`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddToQueue}
+              disabled={selectedFiles.length === 0 || isLoading}
+              className={`px-4 py-2 rounded-md text-${theme?.colors?.text?.primary || "white"} flex items-center ${
+                selectedFiles.length === 0 || isLoading
+                  ? `bg-${theme?.colors?.background?.tertiary || "gray-600"} cursor-not-allowed`
+                  : `bg-${theme?.colors?.primary?.main || "purple-600"} hover:bg-${theme?.colors?.primary?.light || "purple-500"}`
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <FaPlay className="mr-2" />
+                  Play Selected
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

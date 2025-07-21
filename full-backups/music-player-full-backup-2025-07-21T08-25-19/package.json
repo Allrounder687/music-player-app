@@ -1,0 +1,105 @@
+{
+  "name": "my-music-app",
+  "version": "1.0.0",
+  "description": "A modern music player application",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "cross-env VITE_DEV_SERVER_PORT=3001 vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "concurrently -k \"cross-env VITE_DEV_SERVER_PORT=3001 vite\" \"wait-on http-get://localhost:3001 && electron .\"",
+    "start:dynamic": "node scripts/start-dev.js",
+    "debug": "node electron-debug.js",
+    "build:app": "vite build && electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "generate-icons": "node scripts/copy-icon.js",
+    "prepare": "npm run generate-icons",
+    "backup": "node -e \"require('fs').mkdirSync('backups', { recursive: true }); ['src/components/SnakeSeekbar.jsx', 'src/components/AudioPlayer.jsx', 'src/store/MusicContext.jsx', 'electron/main.js', 'vite.config.js', 'package.json', 'index.html'].forEach(file => require('fs').copyFileSync(file, 'backups/' + file.split('/').pop() + '.backup'))\"",
+    "restore-backups": "node restore-backups.js",
+    "full-backup": "node create-full-backup.js",
+    "download-samples": "node scripts/download-sample-audio.js"
+  },
+  "dependencies": {
+    "music-metadata": "^7.14.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.0.1",
+    "react-router-dom": "^6.22.1",
+    "zustand": "^4.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/typography": "^0.5.10",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "cssnano": "^7.1.0",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "electron-devtools-installer": "^3.2.0",
+    "electron-squirrel-startup": "^1.0.0",
+    "ffmpeg-static": "^5.2.0",
+    "postcss": "^8.4.35",
+    "postcss-import": "^16.1.1",
+    "postcss-nesting": "^12.0.2",
+    "tailwindcss": "^3.4.17",
+    "vite": "^5.0.12",
+    "vite-plugin-electron": "^0.11.2",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.example.mymusicapp",
+    "productName": "My Music App",
+    "copyright": "Copyright 2024",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/ffmpeg-static/bin/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "assets/icon.icns",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Audio",
+      "icon": "assets/icon.png",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Music Player"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "yourusername",
+        "repo": "music-player"
+      }
+    ]
+  }
+}

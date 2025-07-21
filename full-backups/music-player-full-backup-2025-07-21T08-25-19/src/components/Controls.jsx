@@ -250,26 +250,7 @@ export const Controls = ({
             </button>
             <button
               onClick={onPlayPause}
-              className={`bg-${theme.colors.primary.main} text-${
-                theme.colors.text.primary
-              } rounded-full h-10 w-10 flex items-center justify-center hover:bg-${
-                theme.colors.primary.light
-              } transition-transform ${
-                isPlaying && audioData?.beatDetected ? "scale-110" : ""
-              }`}
-              style={{
-                boxShadow:
-                  isPlaying && audioData?.bass > 0.1
-                    ? `0 0 ${Math.floor(audioData.bass * 20)}px ${Math.floor(
-                        audioData.bass * 10
-                      )}px rgba(168, 85, 247, ${audioData.bass * 0.8})`
-                    : "none",
-                transform:
-                  isPlaying && audioData?.beatDetected
-                    ? `scale(${1 + audioData.bass * 0.2})`
-                    : "scale(1)",
-                transition: "transform 0.1s ease-out, box-shadow 0.1s ease-out",
-              }}
+              className={`bg-${theme.colors.primary.main} text-${theme.colors.text.primary} rounded-full h-10 w-10 flex items-center justify-center hover:bg-${theme.colors.primary.light}`}
             >
               {isPlaying ? (
                 <FaPause className="h-4 w-4" />
@@ -300,21 +281,13 @@ export const Controls = ({
               )}
             </button>
             <div className="flex-1 relative">
-              {/* Simple static volume slider with no animations */}
-              <div className="relative h-2 bg-gray-700 rounded-full w-full">
-                <div
-                  className={`absolute left-0 top-0 h-full bg-${theme.colors.primary.main} rounded-full`}
-                  style={{ width: `${volume}%` }}
-                />
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-              </div>
+              <Slider
+                value={volume}
+                onChange={handleVolumeChange}
+                className="h-2 bg-gray-700 rounded-full"
+                thumbClassName={`w-3 h-3 bg-${theme.colors.primary.main} rounded-full shadow-md hover:scale-110 transition-transform`}
+                trackClassName={`bg-${theme.colors.primary.main} rounded-full`}
+              />
               <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                 {Math.round(volume)}%
               </div>

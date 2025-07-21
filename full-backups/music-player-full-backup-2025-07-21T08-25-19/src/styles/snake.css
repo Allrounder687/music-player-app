@@ -1,0 +1,19 @@
+/* Snake Seekbar Animations - Simplified to avoid issues */
+
+/* No animations outside the seekbar container */
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.5));
+}
+
+/* Theme-specific glow effects */
+.theme-royal-blue .drop-shadow-glow {
+  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.5));
+}
+
+.theme-crimson-desert .drop-shadow-glow {
+  filter: drop-shadow(0 0 3px rgba(220, 38, 38, 0.5));
+}
+
+.theme-black .drop-shadow-glow {
+  filter: drop-shadow(0 0 3px rgba(156, 163, 175, 0.5));
+}

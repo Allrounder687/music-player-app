@@ -177,7 +177,7 @@ export const AudioPlayer = () => {
     }
   }, []);
 
-  // Audio analysis with requestAnimationFrame for smoother animations
+  // Audio analysis with simplified approach to prevent infinite loops
   useEffect(() => {
     // Always provide default audio data to prevent undefined errors
     const defaultAudioData = {
@@ -185,8 +185,6 @@ export const AudioPlayer = () => {
       mid: 0,
       treble: 0,
       volume: 0,
-      beatDetected: false,
-      beatConfidence: 0,
       frequencyData: new Uint8Array(128).fill(0),
       timeData: new Uint8Array(128).fill(0),
     };
@@ -198,8 +196,8 @@ export const AudioPlayer = () => {
       return;
     }
 
-    // Use requestAnimationFrame for smoother animations when playing
-    const updateAudioData = () => {
+    // Use a simple interval instead of requestAnimationFrame to reduce CPU usage
+    const intervalId = setInterval(() => {
       try {
         const analysisData = AudioAnalysisService.getRealtimeData();
         if (analysisData && typeof analysisData === "object") {
@@ -208,16 +206,10 @@ export const AudioPlayer = () => {
       } catch (error) {
         console.error("Error updating audio data:", error);
       }
-
-      // Continue the animation loop
-      animationFrameRef.current = requestAnimationFrame(updateAudioData);
-    };
-
-    // Start the animation loop
-    animationFrameRef.current = requestAnimationFrame(updateAudioData);
+    }, 100); // Update at 10fps instead of 60fps
 
     return () => {
-      // Clean up animation frame on unmount or when playback stops
+      clearInterval(intervalId);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
