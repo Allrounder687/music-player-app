@@ -287,6 +287,8 @@ export const Controls = ({
                 className="h-2 bg-gray-700 rounded-full"
                 thumbClassName={`w-3 h-3 bg-${theme.colors.primary.main} rounded-full shadow-md hover:scale-110 transition-transform`}
                 trackClassName={`bg-${theme.colors.primary.main} rounded-full`}
+                data-thumb-class={`w-3 h-3 bg-${theme.colors.primary.main} rounded-full shadow-md hover:scale-110 transition-transform`}
+                data-track-class={`bg-${theme.colors.primary.main} rounded-full`}
               />
               <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                 {Math.round(volume)}%

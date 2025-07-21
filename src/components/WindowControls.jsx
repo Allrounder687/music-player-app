@@ -37,26 +37,40 @@ export const WindowControls = () => {
   useEffect(() => {
     if (!isElectron) return;
 
-    // Listen for window state changes
-    const unsubscribeMaximize = window.electron.receive(
-      "window:maximized",
-      () => {
-        setIsMaximized(true);
-      }
-    );
+    // In development mode with Vite, window.electron might be defined but incomplete
+    // Check if receive function exists and is a function
+    if (!window.electron || typeof window.electron.receive !== "function") {
+      console.warn(
+        "window.electron.receive is not available. Window state changes will not be tracked."
+      );
+      return;
+    }
 
-    const unsubscribeUnmaximize = window.electron.receive(
-      "window:unmaximized",
-      () => {
-        setIsMaximized(false);
-      }
-    );
+    try {
+      // Listen for window state changes
+      const unsubscribeMaximize = window.electron.receive(
+        "window:maximized",
+        () => {
+          setIsMaximized(true);
+        }
+      );
 
-    // Cleanup listeners
-    return () => {
-      if (typeof unsubscribeMaximize === "function") unsubscribeMaximize();
-      if (typeof unsubscribeUnmaximize === "function") unsubscribeUnmaximize();
-    };
+      const unsubscribeUnmaximize = window.electron.receive(
+        "window:unmaximized",
+        () => {
+          setIsMaximized(false);
+        }
+      );
+
+      // Cleanup listeners
+      return () => {
+        if (typeof unsubscribeMaximize === "function") unsubscribeMaximize();
+        if (typeof unsubscribeUnmaximize === "function")
+          unsubscribeUnmaximize();
+      };
+    } catch (error) {
+      console.error("Error setting up window state listeners:", error);
+    }
   }, [isElectron]);
 
   if (!isElectron) return null;

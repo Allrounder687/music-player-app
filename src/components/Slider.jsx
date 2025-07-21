@@ -7,6 +7,8 @@ export const Slider = ({
   step = 1,
   onChange,
   className = "",
+  thumbClassName,
+  trackClassName,
   ...props
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -81,13 +83,15 @@ export const Slider = ({
       {...props}
     >
       <div
-        className="absolute left-0 top-0 h-full bg-purple-500"
+        className={`absolute left-0 top-0 h-full bg-purple-500 ${
+          trackClassName || ""
+        }`}
         style={{ width: `${progress}%` }}
       />
       <div
         className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white opacity-0 hover:opacity-100 transition-opacity ${
           isDragging ? "opacity-100" : ""
-        }`}
+        } ${thumbClassName || ""}`}
         style={{ left: `calc(${progress}% - 6px)` }}
       />
     </div>
