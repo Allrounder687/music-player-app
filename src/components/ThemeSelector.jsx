@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { FaPalette } from "react-icons/fa";
 import { useTheme } from "../store/ThemeContext";
 
 export const ThemeSelector = ({ compact = false }) => {
   const { availableThemes, changeTheme, currentTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -14,6 +15,23 @@ export const ThemeSelector = ({ compact = false }) => {
     changeTheme(themeId);
     setIsOpen(false);
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Theme color indicators
   const themeColors = {
@@ -31,7 +49,7 @@ export const ThemeSelector = ({ compact = false }) => {
   // For compact mode, just show the color indicator
   if (compact) {
     return (
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <div
           onClick={toggleDropdown}
           className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center cursor-pointer"
@@ -43,15 +61,22 @@ export const ThemeSelector = ({ compact = false }) => {
 
         {isOpen && (
           <div
-            className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-32 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
-            style={{ backgroundColor: "var(--bg-secondary)" }}
+            className="fixed rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+            style={{
+              backgroundColor: "var(--bg-secondary)",
+              position: "absolute",
+              bottom: "30px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "180px",
+            }}
           >
-            <div className="py-1 grid grid-cols-3 gap-2 p-2" role="menu">
+            <div className="py-2 grid grid-cols-3 gap-2 p-3" role="menu">
               {availableThemes.map((theme) => (
                 <div
                   key={theme.id}
                   onClick={() => handleThemeChange(theme.id)}
-                  className={`w-full h-6 rounded flex items-center justify-center cursor-pointer ${
+                  className={`w-full h-8 rounded flex items-center justify-center cursor-pointer ${
                     currentTheme === theme.id ? "ring-2 ring-white" : ""
                   }`}
                   role="menuitem"
@@ -73,7 +98,7 @@ export const ThemeSelector = ({ compact = false }) => {
                   }}
                 >
                   <div
-                    className={`h-3 w-3 rounded-full ${themeColors[theme.id]}`}
+                    className={`h-4 w-4 rounded-full ${themeColors[theme.id]}`}
                   ></div>
                 </div>
               ))}
@@ -86,27 +111,33 @@ export const ThemeSelector = ({ compact = false }) => {
 
   // Regular mode with text labels
   return (
-    <div className="relative">
-      <button
+    <div className="relative" ref={dropdownRef}>
+      <div
         onClick={toggleDropdown}
-        className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center"
+        className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center cursor-pointer"
         title="Change theme"
         style={{ backgroundColor: "transparent" }}
       >
         <div className={`h-3 w-3 rounded-full ${currentThemeColor}`}></div>
-      </button>
+      </div>
 
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-48 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
-          style={{ backgroundColor: "var(--bg-secondary)" }}
+          className="absolute right-0 mt-2 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+          style={{
+            backgroundColor: "var(--bg-secondary)",
+            position: "absolute",
+            top: "100%",
+            right: "-10px",
+            width: "180px",
+          }}
         >
           <div className="py-1" role="menu" aria-orientation="vertical">
             {availableThemes.map((theme) => (
-              <button
+              <div
                 key={theme.id}
                 onClick={() => handleThemeChange(theme.id)}
-                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${
+                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between cursor-pointer ${
                   currentTheme === theme.id
                     ? "bg-opacity-30 text-white"
                     : "text-gray-300 hover:bg-gray-700"
@@ -127,7 +158,7 @@ export const ThemeSelector = ({ compact = false }) => {
                 <span
                   className={`h-3 w-3 rounded-full ${themeColors[theme.id]}`}
                 ></span>
-              </button>
+              </div>
             ))}
           </div>
         </div>
