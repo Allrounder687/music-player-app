@@ -221,14 +221,18 @@ export const AudioPlayer = () => {
   useEffect(() => {
     if (!audioRef.current || !audioUrl || isLoading) return;
 
-    // Use a flag to track if we're in the middle of a play operation
-    let isPlayOperationInProgress = false;
+    // Use a ref to track if we're in the middle of a play operation to prevent race conditions
+    const isPlayOperationInProgressRef = useRef(false);
+
+    // Keep track of the current play state to prevent auto-pausing
+    const currentPlayStateRef = useRef(isPlaying);
+    currentPlayStateRef.current = isPlaying;
 
     const playAudio = async () => {
       if (isPlaying) {
         try {
           // Set flag before starting play operation
-          isPlayOperationInProgress = true;
+          isPlayOperationInProgressRef.current = true;
 
           // Make sure the audio element is ready
           if (audioRef.current.readyState < 2) {
@@ -236,19 +240,31 @@ export const AudioPlayer = () => {
             // Wait for the audio to be ready
             await new Promise((resolve) => {
               const canPlayHandler = () => {
-                audioRef.current.removeEventListener("canplay", canPlayHandler);
+                if (audioRef.current) {
+                  audioRef.current.removeEventListener(
+                    "canplay",
+                    canPlayHandler
+                  );
+                }
                 resolve();
               };
-              audioRef.current.addEventListener("canplay", canPlayHandler);
+
+              if (audioRef.current) {
+                audioRef.current.addEventListener("canplay", canPlayHandler);
+              }
 
               // Also set a timeout in case the canplay event never fires
               setTimeout(resolve, 3000);
             });
           }
 
-          console.log("Attempting to play audio:", audioRef.current.src);
-          await audioRef.current.play();
-          console.log("Audio playback started successfully");
+          // Check if the play state is still true before playing
+          // This prevents playing after a quick toggle of play/pause
+          if (currentPlayStateRef.current && audioRef.current) {
+            console.log("Attempting to play audio:", audioRef.current.src);
+            await audioRef.current.play();
+            console.log("Audio playback started successfully");
+          }
         } catch (err) {
           console.error("Error playing audio:", err);
           setError(`Failed to play: ${err.message || "Unknown error"}`);
@@ -258,26 +274,61 @@ export const AudioPlayer = () => {
             console.log(
               "Playback was prevented by browser, might need user interaction"
             );
+
+            // Add a click handler to the document to enable audio on user interaction
+            const enableAudio = () => {
+              if (currentPlayStateRef.current && audioRef.current) {
+                audioRef.current
+                  .play()
+                  .catch((e) => console.error("Error in click handler:", e));
+              }
+              document.removeEventListener("click", enableAudio);
+            };
+            document.addEventListener("click", enableAudio, { once: true });
           }
         } finally {
           // Clear flag when operation completes
-          isPlayOperationInProgress = false;
+          isPlayOperationInProgressRef.current = false;
         }
       } else {
         // Only pause if we're not in the middle of a play operation
-        if (!isPlayOperationInProgress) {
+        if (!isPlayOperationInProgressRef.current && audioRef.current) {
           audioRef.current.pause();
         }
       }
     };
 
+    // Add event listener for when audio playback is interrupted
+    const handlePause = () => {
+      // If we didn't explicitly pause and we should be playing, try to resume
+      if (
+        currentPlayStateRef.current &&
+        audioRef.current &&
+        !isPlayOperationInProgressRef.current
+      ) {
+        console.log("Audio was auto-paused, attempting to resume...");
+        audioRef.current.play().catch((err) => {
+          console.error("Failed to resume after auto-pause:", err);
+        });
+      }
+    };
+
+    if (audioRef.current) {
+      audioRef.current.addEventListener("pause", handlePause);
+    }
+
     playAudio();
 
     // Cleanup function
     return () => {
-      // If component unmounts during playback, make sure to pause
-      if (audioRef.current && !isPlayOperationInProgress) {
-        audioRef.current.pause();
+      // Remove the pause event listener
+      if (audioRef.current) {
+        audioRef.current.removeEventListener("pause", handlePause);
+
+        // If component unmounts during playback, make sure to pause
+        if (!isPlayOperationInProgressRef.current) {
+          audioRef.current.pause();
+        }
       }
     };
   }, [isPlaying, audioUrl, isLoading]);

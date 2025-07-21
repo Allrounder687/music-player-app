@@ -116,6 +116,34 @@ export const parseAudioMetadata = async (file) => {
         // Store the file object for direct access
         file: fileObject,
       };
+      
+      // If we're in Electron, try to get metadata including cover art
+      if (window.electron?.audio) {
+        try {
+          const filePath = file.path || file.webkitRelativePath;
+          if (filePath) {
+            console.log(`Getting metadata for imported file: ${filePath}`);
+            const result = await window.electron.audio.getMetadata(filePath);
+            if (result.success && result.metadata) {
+              // Update track with metadata
+              track.title = result.metadata.title || track.title;
+              track.artist = result.metadata.artist || track.artist;
+              track.album = result.metadata.album || track.album;
+              track.duration = result.metadata.duration || track.duration;
+              track.genre = result.metadata.genre;
+              track.year = result.metadata.year;
+              
+              // Set cover art if available
+              if (result.metadata.coverArt) {
+                track.imageUrl = result.metadata.coverArt;
+                console.log(`Cover art found for: ${track.title}`);
+              }
+            }
+          }
+        } catch (metadataError) {
+          console.error("Error getting metadata:", metadataError);
+        }
+      }
 
       resolve(track);
     });
@@ -148,6 +176,34 @@ export const parseAudioMetadata = async (file) => {
         // Store the file object for direct access
         file: fileObject,
       };
+      
+      // If we're in Electron, try to get metadata including cover art
+      if (window.electron?.audio) {
+        try {
+          const filePath = file.path || file.webkitRelativePath;
+          if (filePath) {
+            console.log(`Getting metadata for imported file: ${filePath}`);
+            const result = await window.electron.audio.getMetadata(filePath);
+            if (result.success && result.metadata) {
+              // Update track with metadata
+              track.title = result.metadata.title || track.title;
+              track.artist = result.metadata.artist || track.artist;
+              track.album = result.metadata.album || track.album;
+              track.duration = result.metadata.duration || track.duration;
+              track.genre = result.metadata.genre;
+              track.year = result.metadata.year;
+              
+              // Set cover art if available
+              if (result.metadata.coverArt) {
+                track.imageUrl = result.metadata.coverArt;
+                console.log(`Cover art found for: ${track.title}`);
+              }
+            }
+          }
+        } catch (metadataError) {
+          console.error("Error getting metadata:", metadataError);
+        }
+      }
 
       resolve(track);
     });

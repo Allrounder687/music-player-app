@@ -88,6 +88,89 @@ const initialState = {
 
 function musicReducer(state, action) {
   switch (action.type) {
+    case "DELETE_TRACK": {
+      const trackId = action.trackId;
+
+      // Remove the track from the tracks list
+      const updatedTracks = state.tracks.filter(
+        (track) => track.id !== trackId
+      );
+
+      // Remove the track from the queue if it's there
+      const updatedQueue = state.queue.filter((track) => track.id !== trackId);
+
+      // Adjust currentTrackIndex if needed
+      let updatedCurrentTrackIndex = state.currentTrackIndex;
+      let updatedCurrentTrack = state.currentTrack;
+
+      // If the deleted track is the current track
+      if (state.currentTrack && state.currentTrack.id === trackId) {
+        // If there are tracks left in the queue
+        if (updatedQueue.length > 0) {
+          // Use the same index if possible, or the previous one
+          updatedCurrentTrackIndex = Math.min(
+            state.currentTrackIndex,
+            updatedQueue.length - 1
+          );
+          updatedCurrentTrack = updatedQueue[updatedCurrentTrackIndex];
+        } else {
+          // No tracks left in queue
+          updatedCurrentTrackIndex = -1;
+          updatedCurrentTrack = null;
+        }
+      } else if (state.currentTrackIndex > -1) {
+        // If a track before the current one was deleted, adjust the index
+        const deletedIndex = state.queue.findIndex(
+          (track) => track.id === trackId
+        );
+        if (deletedIndex !== -1 && deletedIndex < state.currentTrackIndex) {
+          updatedCurrentTrackIndex = state.currentTrackIndex - 1;
+        }
+      }
+
+      // Remove the track from all playlists
+      const updatedPlaylists = {
+        favorites: state.playlists.favorites.filter((id) => id !== trackId),
+        recentlyPlayed: state.playlists.recentlyPlayed.filter(
+          (id) => id !== trackId
+        ),
+        custom: { ...state.playlists.custom },
+      };
+
+      // Remove from custom playlists
+      Object.keys(updatedPlaylists.custom).forEach((playlistId) => {
+        updatedPlaylists.custom[playlistId] = {
+          ...updatedPlaylists.custom[playlistId],
+          tracks: updatedPlaylists.custom[playlistId].tracks.filter(
+            (id) => id !== trackId
+          ),
+        };
+      });
+
+      // If the track had a blob URL, revoke it
+      const trackToDelete = state.tracks.find((track) => track.id === trackId);
+      if (
+        trackToDelete &&
+        trackToDelete.previewUrl &&
+        trackToDelete.previewUrl.startsWith("blob:")
+      ) {
+        try {
+          URL.revokeObjectURL(trackToDelete.previewUrl);
+        } catch (e) {
+          console.error("Error revoking blob URL:", e);
+        }
+      }
+
+      return {
+        ...state,
+        tracks: updatedTracks,
+        queue: updatedQueue,
+        currentTrackIndex: updatedCurrentTrackIndex,
+        currentTrack: updatedCurrentTrack,
+        isPlaying: updatedCurrentTrack ? state.isPlaying : false,
+        playlists: updatedPlaylists,
+      };
+    }
     case "PLAY_TRACK":
       // Find the track index in the queue if it exists
       const trackIndex = state.queue.findIndex((t) => t.id === action.track.id);
@@ -577,6 +660,7 @@ export const MusicProvider = ({ children }) => {
     toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
     setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
+    deleteTrack: (trackId) => dispatch({ type: "DELETE_TRACK", trackId }),
     createPlaylist: (name, tracks = []) => {
       const playlistId = `playlist-${Date.now()}`;
       dispatch({

@@ -1,6 +1,7 @@
 const { ipcMain } = require("electron");
 const fs = require("fs").promises;
 const path = require("path");
+const mm = require("music-metadata");
 
 /**
  * Register audio-related IPC handlers
@@ -65,22 +66,54 @@ function registerAudioHandlers() {
       const stats = await fs.stat(filePath);
       const fileName = path.basename(filePath);
 
-      // In a real app, you would use a library like music-metadata to extract metadata
-      // For now, we'll just return some basic info based on the file
-      console.log(`Successfully got metadata for: ${filePath}`);
+      try {
+        // Use music-metadata to extract metadata
+        const metadata = await mm.parseFile(filePath);
+        console.log(`Successfully parsed metadata for: ${filePath}`);
 
-      return {
-        success: true,
-        metadata: {
-          title: fileName.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
-          artist: "Unknown Artist",
-          album: "Unknown Album",
-          duration: 180, // Default duration in seconds
-          size: stats.size,
-          lastModified: stats.mtime,
-          path: filePath, // Include the file path
-        },
-      };
+        // Extract cover art if available
+        let coverArt = null;
+        if (metadata.common.picture && metadata.common.picture.length > 0) {
+          const picture = metadata.common.picture[0];
+          const base64Data = picture.data.toString("base64");
+          coverArt = `data:${picture.format};base64,${base64Data}`;
+          console.log(`Extracted cover art for: ${filePath}`);
+        }
+
+        return {
+          success: true,
+          metadata: {
+            title:
+              metadata.common.title ||
+              fileName.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+            artist: metadata.common.artist || "Unknown Artist",
+            album: metadata.common.album || "Unknown Album",
+            genre: metadata.common.genre ? metadata.common.genre[0] : undefined,
+            year: metadata.common.year,
+            duration: metadata.format.duration || 0,
+            size: stats.size,
+            lastModified: stats.mtime,
+            path: filePath,
+            coverArt: coverArt,
+          },
+        };
+      } catch (metadataError) {
+        console.error(`Error parsing metadata: ${metadataError.message}`);
+
+        // Fallback to basic metadata
+        return {
+          success: true,
+          metadata: {
+            title: fileName.replace(/\.(mp3|wav|ogg|m4a|flac)$/i, ""),
+            artist: "Unknown Artist",
+            album: "Unknown Album",
+            duration: 180, // Default duration in seconds
+            size: stats.size,
+            lastModified: stats.mtime,
+            path: filePath,
+          },
+        };
+      }
     } catch (error) {
       console.error(`Error getting audio metadata: ${filePath}`, error);
       return {

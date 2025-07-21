@@ -27,6 +27,7 @@ export const Library = () => {
     setQueue,
     createPlaylist,
     addToPlaylist,
+    deleteTrack,
   } = useMusic();
   const { theme } = useTheme();
   const [filter, setFilter] = useState("");
@@ -635,16 +636,32 @@ export const Library = () => {
                       {track.artist || "Unknown Artist"}
                     </p>
                   </div>
-                  <button
-                    onClick={() => toggleFavorite(track.id)}
-                    className="text-pink-500 hover:text-pink-400 transition-colors"
-                  >
-                    {playlists.favorites.includes(track.id) ? (
-                      <FaHeart />
-                    ) : (
-                      <FaRegHeart />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleFavorite(track.id)}
+                      className="text-pink-500 hover:text-pink-400 transition-colors"
+                    >
+                      {playlists.favorites.includes(track.id) ? (
+                        <FaHeart />
+                      ) : (
+                        <FaRegHeart />
+                      )}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          confirm("Are you sure you want to delete this track?")
+                        ) {
+                          deleteTrack(track.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-400 transition-colors"
+                      title="Delete track"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 </div>
                 <div
                   className={`mt-2 text-xs text-${
@@ -773,19 +790,35 @@ export const Library = () => {
                 >
                   {formatTime(track.duration)}
                 </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(track.id);
-                  }}
-                  className="text-pink-500 hover:text-pink-400 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  {playlists.favorites.includes(track.id) ? (
-                    <FaHeart />
-                  ) : (
-                    <FaRegHeart />
-                  )}
-                </button>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(track.id);
+                    }}
+                    className="text-pink-500 hover:text-pink-400 transition-colors"
+                  >
+                    {playlists.favorites.includes(track.id) ? (
+                      <FaHeart />
+                    ) : (
+                      <FaRegHeart />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (
+                        confirm("Are you sure you want to delete this track?")
+                      ) {
+                        deleteTrack(track.id);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-400 transition-colors"
+                    title="Delete track"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
