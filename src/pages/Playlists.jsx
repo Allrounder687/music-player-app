@@ -8,10 +8,12 @@ import {
   FaEdit,
   FaFolderOpen,
   FaFileImport,
+  FaListUl,
 } from "react-icons/fa";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
 import { ImportMusic } from "../components/ImportMusic";
+import { PlaylistDetail } from "../components/PlaylistDetail";
 
 export const Playlists = () => {
   const {
@@ -28,6 +30,7 @@ export const Playlists = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [newPlaylist, setNewPlaylist] = useState({
     name: "",
     description: "",
@@ -124,6 +127,26 @@ export const Playlists = () => {
     },
     [getPlaylistTracks, setQueue]
   );
+
+  // View a specific playlist
+  const handleViewPlaylist = (playlistId) => {
+    setSelectedPlaylist(playlistId);
+  };
+
+  // Go back to playlists view
+  const handleBackToPlaylists = () => {
+    setSelectedPlaylist(null);
+  };
+
+  // If a playlist is selected, show the playlist detail view
+  if (selectedPlaylist) {
+    return (
+      <PlaylistDetail
+        playlistId={selectedPlaylist}
+        onBack={handleBackToPlaylists}
+      />
+    );
+  }
 
   return (
     <div
@@ -324,11 +347,12 @@ export const Playlists = () => {
         {playlists.map((playlist) => (
           <div
             key={playlist.id}
+            onClick={() => handleViewPlaylist(playlist.id)}
             className={`group bg-${
               theme?.colors?.background?.secondary || "gray-800"
             } rounded-xl overflow-hidden hover:bg-${
               theme?.colors?.background?.hover || "gray-700/70"
-            } transition-colors relative`}
+            } transition-colors relative cursor-pointer`}
           >
             <div className="relative">
               <img
@@ -374,7 +398,22 @@ export const Playlists = () => {
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => handleDeletePlaylist(playlist.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewPlaylist(playlist.id);
+                    }}
+                    className={`text-${
+                      theme?.colors?.text?.muted || "gray-400"
+                    } hover:text-${theme?.colors?.text?.main || "white"} p-1`}
+                    title="View playlist"
+                  >
+                    <FaListUl />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePlaylist(playlist.id);
+                    }}
                     className={`text-${
                       theme?.colors?.text?.muted || "gray-400"
                     } hover:text-${theme?.colors?.text?.main || "white"} p-1`}
