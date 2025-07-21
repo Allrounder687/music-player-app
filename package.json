@@ -4,10 +4,11 @@
   "description": "A modern music player application",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "cross-env VITE_DEV_SERVER_PORT=3001 vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "concurrently -k \"vite\" \"wait-on tcp:3001 && electron .\"",
+    "start": "concurrently -k \"cross-env VITE_DEV_SERVER_PORT=3001 vite\" \"wait-on http-get://localhost:3001 && electron .\"",
+    "start:dynamic": "node scripts/start-dev.js",
     "debug": "node electron-debug.js",
     "build:app": "vite build && electron-builder",
     "postinstall": "electron-builder install-app-deps",
@@ -15,7 +16,8 @@
     "prepare": "npm run generate-icons",
     "backup": "node -e \"require('fs').mkdirSync('backups', { recursive: true }); ['src/components/SnakeSeekbar.jsx', 'src/components/AudioPlayer.jsx', 'src/store/MusicContext.jsx', 'electron/main.js', 'vite.config.js', 'package.json', 'index.html'].forEach(file => require('fs').copyFileSync(file, 'backups/' + file.split('/').pop() + '.backup'))\"",
     "restore-backups": "node restore-backups.js",
-    "full-backup": "node create-full-backup.js"
+    "full-backup": "node create-full-backup.js",
+    "download-samples": "node scripts/download-sample-audio.js"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -33,6 +35,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "cssnano": "^7.1.0",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",

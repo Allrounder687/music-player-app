@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Analyzes modified code for potential improvements, including code smells, design patterns, and best practices. Provides suggestions to enhance readability, maintainability, and performance.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.{js",
+      "jsx",
+      "ts",
+      "tsx}",
+      "electron/**/*.js",
+      "utils/**/*.js",
+      "scripts/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the following code changes and provide specific improvement suggestions:\n\n1. Code smells: Identify any potential code smells or anti-patterns\n2. Design patterns: Suggest appropriate design patterns where applicable\n3. Best practices: Recommend adherence to React, JavaScript/TypeScript, and Electron best practices\n4. Performance: Identify potential performance bottlenecks or optimizations\n5. Readability: Suggest ways to improve code clarity and documentation\n6. Maintainability: Recommend structural improvements for better maintainability\n\nFocus on practical, actionable suggestions that maintain existing functionality while improving code quality. Consider the project's technology stack (React, Electron, Zustand) and architecture when making recommendations."
+  }
+}

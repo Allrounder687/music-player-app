@@ -20,13 +20,35 @@ export const createAudioUrl = async (filePath) => {
 
   // Handle relative paths for sample files
   if (filePath.startsWith("/")) {
-    return filePath;
+    // For development server, ensure the path is correct
+    // Remove any leading slash to make it relative to the base URL
+    const path = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+    console.log(`Using relative path: ${path}`);
+
+    // For sample audio files or any other relative paths, use the full URL
+    const fullUrl = window.location.origin + "/" + path;
+    console.log(`Using full URL for relative path: ${fullUrl}`);
+    return fullUrl;
   }
 
-  // If we're in a browser and this is a File object URL from the File API
+  // If we're in a browser and this is a File object from the File API
   if (typeof filePath === "object" && filePath instanceof File) {
     console.log(`Creating blob URL for File object: ${filePath.name}`);
-    return URL.createObjectURL(filePath);
+    try {
+      const blobUrl = URL.createObjectURL(filePath);
+      console.log(`Created blob URL for file: ${blobUrl}`);
+      return blobUrl;
+    } catch (error) {
+      console.error(
+        `Error creating blob URL for file: ${filePath.name}`,
+        error
+      );
+      // If we can't create a blob URL, try to use the file directly
+      if (filePath.path) {
+        return filePath.path;
+      }
+      throw error;
+    }
   }
 
   // Check if we're in Electron

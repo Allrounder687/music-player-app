@@ -6,46 +6,46 @@ const MusicContext = createContext();
 const sampleTracks = [
   {
     id: "1",
-    title: "Bohemian Rhapsody",
-    artist: "Queen",
-    album: "A Night at the Opera",
-    duration: 355, // in seconds
+    title: "Piano Loop 1",
+    artist: "Sample Artist",
+    album: "Sample Album",
+    duration: 30, // in seconds
     imageUrl: "/images/album-placeholder.svg",
     previewUrl: "/audio/sample1.mp3",
   },
   {
     id: "2",
-    title: "Stairway to Heaven",
-    artist: "Led Zeppelin",
-    album: "Led Zeppelin IV",
-    duration: 482, // in seconds
+    title: "Piano Loop 2",
+    artist: "Sample Artist",
+    album: "Sample Album",
+    duration: 30, // in seconds
     imageUrl: "/images/album-placeholder.svg",
     previewUrl: "/audio/sample2.mp3",
   },
   {
     id: "3",
-    title: "Hotel California",
-    artist: "Eagles",
-    album: "Hotel California",
-    duration: 390, // in seconds
+    title: "Drum Beat",
+    artist: "Sample Artist",
+    album: "Sample Album",
+    duration: 45, // in seconds
     imageUrl: "/images/album-placeholder.svg",
     previewUrl: "/audio/sample3.mp3",
   },
   {
     id: "4",
-    title: "Sweet Child O' Mine",
-    artist: "Guns N' Roses",
-    album: "Appetite for Destruction",
-    duration: 356, // in seconds
+    title: "Piano Loop (Alternative)",
+    artist: "Sample Artist",
+    album: "Sample Album 2",
+    duration: 30, // in seconds
     imageUrl: "/images/album-placeholder.svg",
     previewUrl: "/audio/sample1.mp3",
   },
   {
     id: "5",
-    title: "Smells Like Teen Spirit",
-    artist: "Nirvana",
-    album: "Nevermind",
-    duration: 301, // in seconds
+    title: "Piano Loop (Remix)",
+    artist: "Sample Artist",
+    album: "Sample Album 2",
+    duration: 30, // in seconds
     imageUrl: "/images/album-placeholder.svg",
     previewUrl: "/audio/sample2.mp3",
   },

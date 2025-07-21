@@ -50,14 +50,46 @@ export const AudioPlayer = () => {
 
         // Determine the source for the audio
         let sourcePath;
+        let useDirectFile = false;
 
+        // First check if we have a direct File object (most reliable)
+        if (currentTrack.file instanceof File) {
+          console.log(`Using direct File object: ${currentTrack.file.name}`);
+          sourcePath = currentTrack.file;
+          useDirectFile = true;
+        }
         // For imported files, the previewUrl might already be a blob URL
-        if (
+        else if (
           currentTrack.previewUrl &&
           currentTrack.previewUrl.startsWith("blob:")
         ) {
           sourcePath = currentTrack.previewUrl;
           console.log(`Using existing blob URL: ${sourcePath}`);
+
+          // Check if the blob URL is still valid by trying to fetch it
+          try {
+            const response = await fetch(sourcePath, { method: "HEAD" });
+            if (!response.ok) {
+              console.warn(
+                `Blob URL appears invalid, will try to recreate: ${sourcePath}`
+              );
+              // If we have the original file, use that instead
+              if (currentTrack.file instanceof File) {
+                sourcePath = currentTrack.file;
+                useDirectFile = true;
+              } else if (currentTrack.path || currentTrack.filePath) {
+                sourcePath = currentTrack.path || currentTrack.filePath;
+              }
+            }
+          } catch (e) {
+            console.warn(
+              `Error checking blob URL, will try to recreate: ${e.message}`
+            );
+            // Fall back to file path if available
+            if (currentTrack.path || currentTrack.filePath) {
+              sourcePath = currentTrack.path || currentTrack.filePath;
+            }
+          }
         }
         // For local files, use path or filePath
         else if (currentTrack.path || currentTrack.filePath) {
@@ -189,20 +221,65 @@ export const AudioPlayer = () => {
   useEffect(() => {
     if (!audioRef.current || !audioUrl || isLoading) return;
 
+    // Use a flag to track if we're in the middle of a play operation
+    let isPlayOperationInProgress = false;
+
     const playAudio = async () => {
       if (isPlaying) {
         try {
+          // Set flag before starting play operation
+          isPlayOperationInProgress = true;
+
+          // Make sure the audio element is ready
+          if (audioRef.current.readyState < 2) {
+            console.log("Audio not ready yet, loading...");
+            // Wait for the audio to be ready
+            await new Promise((resolve) => {
+              const canPlayHandler = () => {
+                audioRef.current.removeEventListener("canplay", canPlayHandler);
+                resolve();
+              };
+              audioRef.current.addEventListener("canplay", canPlayHandler);
+
+              // Also set a timeout in case the canplay event never fires
+              setTimeout(resolve, 3000);
+            });
+          }
+
+          console.log("Attempting to play audio:", audioRef.current.src);
           await audioRef.current.play();
+          console.log("Audio playback started successfully");
         } catch (err) {
           console.error("Error playing audio:", err);
-          // Don't try to auto-recover here, just log the error
+          setError(`Failed to play: ${err.message || "Unknown error"}`);
+
+          // If the error is related to user interaction, try again after a short delay
+          if (err.name === "NotAllowedError") {
+            console.log(
+              "Playback was prevented by browser, might need user interaction"
+            );
+          }
+        } finally {
+          // Clear flag when operation completes
+          isPlayOperationInProgress = false;
         }
       } else {
-        audioRef.current.pause();
+        // Only pause if we're not in the middle of a play operation
+        if (!isPlayOperationInProgress) {
+          audioRef.current.pause();
+        }
       }
     };
 
     playAudio();
+
+    // Cleanup function
+    return () => {
+      // If component unmounts during playback, make sure to pause
+      if (audioRef.current && !isPlayOperationInProgress) {
+        audioRef.current.pause();
+      }
+    };
   }, [isPlaying, audioUrl, isLoading]);
 
   // Handle volume changes
@@ -249,19 +326,67 @@ export const AudioPlayer = () => {
 
   const handleError = useCallback(
     (e) => {
-      console.error("Audio playback error:", e);
-      setError(
-        `Audio playback error: ${e.target.error?.message || "Unknown error"}`
-      );
+      // Safely log error without circular references
+      const errorMessage = e.target?.error?.message || "Unknown error";
+      console.error("Error playing audio:", errorMessage);
+
+      // Log more details about the audio source
+      console.error("Audio source that failed:", audioRef.current?.src);
+
+      // Check if the error is related to a missing file
+      const isMissingFile =
+        errorMessage.includes("Failed to load") ||
+        errorMessage.includes("not found") ||
+        errorMessage.includes("DEMUXER_ERROR_COULD_NOT_OPEN");
+
+      // Set a more user-friendly error message
+      if (isMissingFile) {
+        setError(
+          `Could not find or access the audio file. The file may have been moved or deleted.`
+        );
+      } else {
+        setError(`Audio playback error: ${errorMessage}`);
+      }
+
+      // For imported files, try to recreate the blob URL if possible
+      if (
+        currentTrack &&
+        currentTrack.file instanceof File &&
+        audioUrl.startsWith("blob:")
+      ) {
+        console.log(
+          "Attempting to recreate blob URL for file:",
+          currentTrack.file.name
+        );
+        try {
+          // Revoke the old URL
+          URL.revokeObjectURL(audioUrl);
+
+          // Create a new URL
+          const newUrl = URL.createObjectURL(currentTrack.file);
+          console.log(`Created new blob URL: ${newUrl}`);
+
+          // Update the audio URL
+          setAudioUrl(newUrl);
+
+          // Don't move to next track in this case
+          return;
+        } catch (recreateError) {
+          console.error("Failed to recreate blob URL:", recreateError);
+        }
+      }
 
       // Try to recover by moving to the next track, but only if not already loading
       if (!loadingRef.current) {
+        console.log(
+          "Attempting to recover by moving to next track in 2 seconds"
+        );
         setTimeout(() => {
           nextTrack();
         }, 2000);
       }
     },
-    [nextTrack]
+    [nextTrack, currentTrack, audioUrl]
   );
 
   return (
@@ -276,6 +401,9 @@ export const AudioPlayer = () => {
         onDurationChange={handleDurationChange}
         onEnded={handleEnded}
         onError={handleError}
+        onLoadStart={() => console.log("Audio load started:", audioUrl)}
+        onCanPlay={() => console.log("Audio can play now:", audioUrl)}
+        onLoadedData={() => console.log("Audio data loaded:", audioUrl)}
       />
 
       {/* We could render some UI for debugging */}

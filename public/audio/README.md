@@ -1,14 +1,12 @@
 # Sample Audio Files
 
-This directory should contain sample audio files for testing the music player.
+This directory contains sample audio files for testing the music player.
 
-Recommended files:
+## Included Files
 
-- sample1.mp3
-- sample2.mp3
-- sample3.mp3
-
-For copyright reasons, these files are not included in the repository. You should add your own audio files for testing purposes.
+- sample1.mp3: Piano Loop
+- sample2.mp3: Piano Loop (copy of sample1.mp3)
+- sample3.mp3: Drum Beat
 
 ## Audio Format Support
 

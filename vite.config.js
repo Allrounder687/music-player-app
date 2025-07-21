@@ -20,8 +20,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001, // Changed to match the actual port being used
-    strictPort: true, // Ensure it uses this port
+    port: 3001, // Default port
+    strictPort: false, // Allow Vite to try other ports if 3001 is busy
     open: false,
   },
 });

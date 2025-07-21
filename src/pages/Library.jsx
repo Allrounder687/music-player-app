@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
 import {
@@ -7,34 +7,69 @@ import {
   FaHeart,
   FaRegHeart,
   FaEllipsisH,
+  FaFilter,
+  FaPlus,
+  FaRandom,
+  FaCheck,
+  FaTrash,
 } from "react-icons/fa";
 import { formatTime } from "../utils/audioUtils";
+import { TrackContextMenu } from "../components/TrackContextMenu";
 
 export const Library = () => {
   const {
     tracks,
     playTrack,
     currentTrack,
+    isPlaying,
     playlists,
     toggleFavorite,
     setQueue,
+    createPlaylist,
+    addToPlaylist,
   } = useMusic();
   const { theme } = useTheme();
   const [filter, setFilter] = useState("");
   const [sortBy, setSortBy] = useState("dateAdded"); // dateAdded, title, artist, album
   const [sortDirection, setSortDirection] = useState("desc"); // asc, desc
   const [view, setView] = useState("grid"); // grid, list
+  const [selectedTracks, setSelectedTracks] = useState([]);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState("all");
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({
+    x: 0,
+    y: 0,
+  });
+  const [contextMenuTrack, setContextMenuTrack] = useState(null);
+  const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+
+  // Extract unique genres
+  const genres = [
+    "all",
+    ...new Set(tracks.map((track) => track.genre || "Unknown").filter(Boolean)),
+  ];
+
+  // Ref for tracking click outside context menu
+  const contextMenuRef = useRef(null);
 
   // Filter and sort tracks
   const filteredTracks = tracks
     .filter((track) => {
-      if (!filter) return true;
-      const searchTerm = filter.toLowerCase();
-      return (
-        track.title?.toLowerCase().includes(searchTerm) ||
-        track.artist?.toLowerCase().includes(searchTerm) ||
-        track.album?.toLowerCase().includes(searchTerm)
-      );
+      // Filter by search term
+      const matchesSearch =
+        !filter ||
+        track.title?.toLowerCase().includes(filter.toLowerCase()) ||
+        track.artist?.toLowerCase().includes(filter.toLowerCase()) ||
+        track.album?.toLowerCase().includes(filter.toLowerCase());
+
+      // Filter by genre
+      const matchesGenre =
+        selectedGenre === "all" || (track.genre || "Unknown") === selectedGenre;
+
+      return matchesSearch && matchesGenre;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -66,6 +101,27 @@ export const Library = () => {
     }
   };
 
+  // Play selected tracks
+  const playSelectedTracks = () => {
+    if (selectedTracks.length > 0) {
+      const tracksToPlay = tracks.filter((track) =>
+        selectedTracks.includes(track.id)
+      );
+      setQueue(tracksToPlay, true);
+    }
+  };
+
+  // Play random tracks
+  const playRandomTracks = () => {
+    if (filteredTracks.length > 0) {
+      // Create a copy and shuffle it
+      const shuffledTracks = [...filteredTracks].sort(
+        () => Math.random() - 0.5
+      );
+      setQueue(shuffledTracks, true);
+    }
+  };
+
   // Toggle sort direction
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -80,6 +136,105 @@ export const Library = () => {
       setSortDirection("asc");
     }
   };
+
+  // Toggle track selection
+  const toggleTrackSelection = (trackId, event) => {
+    // If shift key is pressed and there are already selected tracks
+    if (event && event.shiftKey && selectedTracks.length > 0) {
+      const lastSelectedId = selectedTracks[selectedTracks.length - 1];
+      const allTrackIds = filteredTracks.map((t) => t.id);
+      const lastSelectedIndex = allTrackIds.indexOf(lastSelectedId);
+      const currentIndex = allTrackIds.indexOf(trackId);
+
+      if (lastSelectedIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastSelectedIndex, currentIndex);
+        const end = Math.max(lastSelectedIndex, currentIndex);
+        const rangeIds = allTrackIds.slice(start, end + 1);
+
+        // Add all tracks in range to selection
+        setSelectedTracks((prev) => {
+          const newSelection = [...prev];
+          rangeIds.forEach((id) => {
+            if (!newSelection.includes(id)) {
+              newSelection.push(id);
+            }
+          });
+          return newSelection;
+        });
+        return;
+      }
+    }
+
+    // Normal toggle behavior
+    setSelectedTracks((prev) =>
+      prev.includes(trackId)
+        ? prev.filter((id) => id !== trackId)
+        : [...prev, trackId]
+    );
+  };
+
+  // Select all tracks
+  const selectAllTracks = () => {
+    if (selectedTracks.length === filteredTracks.length) {
+      // If all are selected, deselect all
+      setSelectedTracks([]);
+    } else {
+      // Otherwise select all
+      setSelectedTracks(filteredTracks.map((track) => track.id));
+    }
+  };
+
+  // Handle context menu
+  const handleContextMenu = (e, track) => {
+    e.preventDefault();
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    setContextMenuTrack(track);
+    setShowContextMenu(true);
+  };
+
+  // Close context menu
+  const closeContextMenu = () => {
+    setShowContextMenu(false);
+  };
+
+  // Create playlist from selected tracks
+  const handleCreatePlaylist = () => {
+    if (newPlaylistName.trim() && selectedTracks.length > 0) {
+      const playlistId = createPlaylist(newPlaylistName);
+      addToPlaylist(playlistId, selectedTracks);
+      setNewPlaylistName("");
+      setShowCreatePlaylistModal(false);
+      setSelectedTracks([]);
+    }
+  };
+
+  // Add selected tracks to favorites
+  const addSelectedToFavorites = () => {
+    selectedTracks.forEach((trackId) => {
+      if (!playlists.favorites.includes(trackId)) {
+        toggleFavorite(trackId);
+      }
+    });
+    setSelectedTracks([]);
+  };
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showContextMenu &&
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target)
+      ) {
+        setShowContextMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showContextMenu]);
 
   return (
     <div
@@ -101,7 +256,7 @@ export const Library = () => {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-grow">
             <input
@@ -126,6 +281,52 @@ export const Library = () => {
               >
                 ×
               </button>
+            )}
+          </div>
+
+          {/* Genre filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className={`px-4 py-2 rounded-full bg-${
+                theme?.colors?.background?.secondary || "gray-800"
+              } text-${theme?.colors?.text?.main || "white"} border border-${
+                theme?.colors?.border?.main || "gray-700"
+              } flex items-center`}
+            >
+              <FaFilter className="mr-2" />
+              {selectedGenre === "all" ? "All Genres" : selectedGenre}
+            </button>
+
+            {showFilterMenu && (
+              <div
+                className={`absolute top-full left-0 mt-1 bg-${
+                  theme?.colors?.background?.secondary || "gray-800"
+                } border border-${
+                  theme?.colors?.border?.main || "gray-700"
+                } rounded-lg shadow-lg z-10 w-48 max-h-60 overflow-y-auto`}
+              >
+                {genres.map((genre) => (
+                  <button
+                    key={genre}
+                    onClick={() => {
+                      setSelectedGenre(genre);
+                      setShowFilterMenu(false);
+                    }}
+                    className={`block w-full text-left px-4 py-2 hover:bg-${
+                      theme?.colors?.background?.hover || "gray-700"
+                    } ${
+                      selectedGenre === genre
+                        ? `bg-${
+                            theme?.colors?.primary?.main || "purple-600"
+                          } text-white`
+                        : `text-${theme?.colors?.text?.main || "white"}`
+                    }`}
+                  >
+                    {genre === "all" ? "All Genres" : genre}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
@@ -161,22 +362,192 @@ export const Library = () => {
             </button>
           </div>
 
-          {/* Play all button */}
+          {/* Multi-select toggle */}
           <button
-            onClick={playAllTracks}
-            disabled={filteredTracks.length === 0}
-            className={`px-4 py-2 rounded-full bg-${
-              theme?.colors?.primary?.main || "purple-600"
-            } hover:bg-${
-              theme?.colors?.primary?.dark || "purple-700"
-            } text-white flex items-center justify-center ${
-              filteredTracks.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            onClick={() => {
+              setMultiSelectMode(!multiSelectMode);
+              if (multiSelectMode) setSelectedTracks([]);
+            }}
+            className={`px-4 py-2 rounded-full ${
+              multiSelectMode
+                ? `bg-${
+                    theme?.colors?.primary?.main || "purple-600"
+                  } text-white`
+                : `bg-${
+                    theme?.colors?.background?.secondary || "gray-800"
+                  } text-${
+                    theme?.colors?.text?.main || "white"
+                  } border border-${theme?.colors?.border?.main || "gray-700"}`
+            } flex items-center`}
           >
-            <FaPlay className="mr-2" /> Play All
+            {multiSelectMode ? (
+              <FaCheck className="mr-2" />
+            ) : (
+              <FaPlus className="mr-2" />
+            )}
+            {multiSelectMode ? "Done" : "Select"}
           </button>
+
+          {/* Play buttons */}
+          <div className="flex space-x-2">
+            <button
+              onClick={playAllTracks}
+              disabled={filteredTracks.length === 0}
+              className={`px-4 py-2 rounded-full bg-${
+                theme?.colors?.primary?.main || "purple-600"
+              } hover:bg-${
+                theme?.colors?.primary?.dark || "purple-700"
+              } text-white flex items-center justify-center ${
+                filteredTracks.length === 0
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              <FaPlay className="mr-2" /> Play All
+            </button>
+
+            <button
+              onClick={playRandomTracks}
+              disabled={filteredTracks.length === 0}
+              className={`px-4 py-2 rounded-full bg-${
+                theme?.colors?.background?.secondary || "gray-800"
+              } hover:bg-${
+                theme?.colors?.background?.hover || "gray-700"
+              } text-${
+                theme?.colors?.text?.main || "white"
+              } flex items-center justify-center ${
+                filteredTracks.length === 0
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              <FaRandom className="mr-2" /> Shuffle
+            </button>
+          </div>
+
+          {/* Selection actions */}
+          {multiSelectMode && selectedTracks.length > 0 && (
+            <div className="flex space-x-2">
+              <button
+                onClick={playSelectedTracks}
+                className={`px-4 py-2 rounded-full bg-${
+                  theme?.colors?.primary?.main || "purple-600"
+                } hover:bg-${
+                  theme?.colors?.primary?.dark || "purple-700"
+                } text-white flex items-center justify-center`}
+              >
+                <FaPlay className="mr-2" /> Play Selected
+              </button>
+
+              <button
+                onClick={addSelectedToFavorites}
+                className={`px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-center`}
+              >
+                <FaHeart className="mr-2" /> Add to Favorites
+              </button>
+
+              <button
+                onClick={() => setShowCreatePlaylistModal(true)}
+                className={`px-4 py-2 rounded-full bg-${
+                  theme?.colors?.background?.secondary || "gray-800"
+                } hover:bg-${
+                  theme?.colors?.background?.hover || "gray-700"
+                } text-${
+                  theme?.colors?.text?.main || "white"
+                } flex items-center justify-center`}
+              >
+                <FaPlus className="mr-2" /> Create Playlist
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Create Playlist Modal */}
+      {showCreatePlaylistModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div
+            className={`bg-${
+              theme?.colors?.background?.secondary || "gray-800"
+            } rounded-xl p-6 w-full max-w-md`}
+          >
+            <h2
+              className={`text-2xl font-bold mb-6 text-${
+                theme?.colors?.text?.main || "white"
+              }`}
+            >
+              Create Playlist from Selected Tracks
+            </h2>
+
+            <div className="mb-6">
+              <label
+                className={`block text-sm font-medium text-${
+                  theme?.colors?.text?.muted || "gray-300"
+                } mb-2`}
+              >
+                Playlist Name
+              </label>
+              <input
+                type="text"
+                value={newPlaylistName}
+                onChange={(e) => setNewPlaylistName(e.target.value)}
+                className={`w-full bg-${
+                  theme?.colors?.background?.tertiary || "gray-700"
+                } border border-${
+                  theme?.colors?.border?.main || "gray-600"
+                } rounded-lg px-4 py-2 text-${
+                  theme?.colors?.text?.main || "white"
+                } focus:ring-2 focus:ring-${
+                  theme?.colors?.primary?.main || "purple-500"
+                } focus:border-transparent`}
+                placeholder="My New Playlist"
+                autoFocus
+              />
+            </div>
+
+            <div
+              className={`mb-6 text-${
+                theme?.colors?.text?.muted || "gray-400"
+              }`}
+            >
+              {selectedTracks.length} tracks will be added to this playlist.
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowCreatePlaylistModal(false)}
+                className={`px-4 py-2 text-${
+                  theme?.colors?.text?.muted || "gray-400"
+                } hover:text-${theme?.colors?.text?.main || "white"}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreatePlaylist}
+                disabled={!newPlaylistName.trim()}
+                className={`px-6 py-2 rounded-full bg-${
+                  theme?.colors?.primary?.main || "purple-600"
+                } hover:bg-${
+                  theme?.colors?.primary?.dark || "purple-700"
+                } text-white ${
+                  !newPlaylistName.trim() ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                Create Playlist
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {showContextMenu && contextMenuTrack && (
+        <TrackContextMenu
+          track={contextMenuTrack}
+          position={contextMenuPosition}
+          onClose={closeContextMenu}
+        />
+      )}
 
       {filteredTracks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">

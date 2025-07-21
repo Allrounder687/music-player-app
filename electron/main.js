@@ -48,7 +48,9 @@ function createWindow() {
 
   // Load the app
   if (isDev) {
-    mainWindow.loadURL("http://localhost:3001"); // Updated to port 3001
+    // Get port from environment variable or use default
+    const port = process.env.VITE_DEV_SERVER_PORT || 3001;
+    mainWindow.loadURL(`http://localhost:${port}`);
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));

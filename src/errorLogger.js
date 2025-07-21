@@ -7,11 +7,38 @@ console.error = function (...args) {
   originalError.apply(console, args);
 
   // Create a more visible error message
-  const errorMsg = args
-    .map((arg) =>
-      typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
-    )
-    .join(" ");
+  let errorMsg;
+  try {
+    errorMsg = args
+      .map((arg) => {
+        if (typeof arg === "object") {
+          try {
+            // Handle circular references by using a custom replacer
+            const seen = new WeakSet();
+            return JSON.stringify(
+              arg,
+              (key, value) => {
+                if (typeof value === "object" && value !== null) {
+                  if (seen.has(value)) {
+                    return "[Circular Reference]";
+                  }
+                  seen.add(value);
+                }
+                return value;
+              },
+              2
+            );
+          } catch (e) {
+            return `[Object: ${arg?.constructor?.name || typeof arg}]`;
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(" ");
+  } catch (e) {
+    errorMsg = "Error formatting error message: " + e.message;
+  }
 
   console.log(
     "%c CRITICAL ERROR: " + errorMsg,

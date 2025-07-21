@@ -39,15 +39,23 @@ export const Playlists = () => {
   // Load playlists from MusicContext - memoize the function to avoid dependency issues
   const loadPlaylists = useCallback(() => {
     try {
-      const loadedPlaylists = getAllPlaylists().map((playlist) => ({
-        id: playlist.id,
-        name: playlist.name,
-        trackCount: playlist.tracks.length,
-        // Generate a consistent image URL based on playlist name
-        imageUrl: `https://source.unsplash.com/random/300x300/?${encodeURIComponent(
-          playlist.name.split(" ")[0] || "music"
-        )}`,
-      }));
+      const loadedPlaylists = getAllPlaylists().map((playlist) => {
+        // Generate a color based on playlist name for consistent but unique colors
+        const hash = playlist.name.split("").reduce((acc, char) => {
+          return char.charCodeAt(0) + ((acc << 5) - acc);
+        }, 0);
+        const h = Math.abs(hash) % 360;
+
+        return {
+          id: playlist.id,
+          name: playlist.name,
+          trackCount: playlist.tracks.length,
+          // Use local placeholder with color instead of Unsplash API
+          color: `hsl(${h}, 70%, 40%)`,
+          // Keep a fallback image path
+          imageUrl: "/images/album-placeholder.svg",
+        };
+      });
 
       setPlaylists(loadedPlaylists);
     } catch (error) {
@@ -355,16 +363,14 @@ export const Playlists = () => {
             } transition-colors relative cursor-pointer`}
           >
             <div className="relative">
-              <img
-                src={playlist.imageUrl}
-                alt={playlist.name}
-                className="w-full aspect-square object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src =
-                    "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22800%22%20height%3D%22400%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20400%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_18f6a1a6e9f%20text%20%7B%20fill%3A%23AAAAAA%3Bfont-weight%3Abold%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A40pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_18f6a1a6e9f%22%3E%3Crect%20width%3D%22800%22%20height%3D%22400%22%20fill%3D%22%23333%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%22285.921875%22%20y%3D%22217.7%22%3EMusic%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E";
-                }}
-              />
+              <div
+                className="w-full aspect-square object-cover flex items-center justify-center"
+                style={{ backgroundColor: playlist.color }}
+              >
+                <span className="text-white text-3xl font-bold">
+                  {playlist.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
                 <button
                   onClick={() => handlePlayPlaylist(playlist.id)}
