@@ -32,14 +32,14 @@ export const ThemeSelector = ({ compact = false }) => {
   if (compact) {
     return (
       <div className="relative">
-        <button
+        <div
           onClick={toggleDropdown}
-          className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center"
+          className="p-1 rounded-full hover:bg-gray-700 flex items-center justify-center cursor-pointer"
           title="Change theme"
           style={{ backgroundColor: "transparent" }}
         >
           <div className={`h-3 w-3 rounded-full ${currentThemeColor}`}></div>
-        </button>
+        </div>
 
         {isOpen && (
           <div
@@ -48,10 +48,10 @@ export const ThemeSelector = ({ compact = false }) => {
           >
             <div className="py-1 grid grid-cols-3 gap-2 p-2" role="menu">
               {availableThemes.map((theme) => (
-                <button
+                <div
                   key={theme.id}
                   onClick={() => handleThemeChange(theme.id)}
-                  className={`w-full h-6 rounded flex items-center justify-center ${
+                  className={`w-full h-6 rounded flex items-center justify-center cursor-pointer ${
                     currentTheme === theme.id ? "ring-2 ring-white" : ""
                   }`}
                   role="menuitem"
@@ -75,7 +75,7 @@ export const ThemeSelector = ({ compact = false }) => {
                   <div
                     className={`h-3 w-3 rounded-full ${themeColors[theme.id]}`}
                   ></div>
-                </button>
+                </div>
               ))}
             </div>
           </div>

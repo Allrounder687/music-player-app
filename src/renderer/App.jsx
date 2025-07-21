@@ -9,6 +9,9 @@ import { NowPlaying } from "../pages/NowPlaying";
 import { Favourites } from "../pages/Favourites";
 import { Playlists } from "../pages/Playlists";
 import { Library } from "../pages/Library";
+import { RecentlyAdded } from "../pages/RecentlyAdded";
+import { RecentlyPlayed } from "../pages/RecentlyPlayed";
+import { MostPlayed } from "../pages/MostPlayed";
 import { MusicProvider } from "../store/MusicContext";
 import { ThemeProvider } from "../store/ThemeContext";
 import "../styles/main.css";
@@ -40,6 +43,9 @@ const App = () => {
                   <Route path="/library" element={<Library />} />
                   <Route path="/favourites" element={<Favourites />} />
                   <Route path="/playlists" element={<Playlists />} />
+                  <Route path="/recent" element={<RecentlyAdded />} />
+                  <Route path="/history" element={<RecentlyPlayed />} />
+                  <Route path="/popular" element={<MostPlayed />} />
                 </Routes>
               </main>
             </div>

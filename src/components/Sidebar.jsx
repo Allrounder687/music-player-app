@@ -109,7 +109,7 @@ export const Sidebar = ({ isVisible, toggleSidebar }) => {
                 </div>
               </div>
             ) : (
-              <button
+              <div
                 className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
                 style={{ color: "var(--text-secondary)" }}
                 title="Change Theme"
@@ -118,7 +118,7 @@ export const Sidebar = ({ isVisible, toggleSidebar }) => {
                 <div className="mt-1">
                   <ThemeSelector compact={true} />
                 </div>
-              </button>
+              </div>
             )}
           </div>
 
