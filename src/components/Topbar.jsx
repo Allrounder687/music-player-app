@@ -1,25 +1,30 @@
 import React, { useState } from "react";
-import { FaSearch, FaBell, FaUserCircle, FaMusic } from "react-icons/fa";
-import { useTheme } from "../store/ThemeContext";
+import { FaSearch, FaMusic, FaBars, FaTimes } from "react-icons/fa";
 import { WindowControls } from "./WindowControls";
 
-export const Topbar = () => {
+export const Topbar = ({ toggleSidebar, sidebarVisible }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { theme } = useTheme();
 
   return (
     <header
-      className={`bg-${theme.colors.background.secondary} border-b border-${theme.colors.border} select-none`}
+      className="select-none border-b"
+      style={{
+        backgroundColor: "var(--bg-secondary)",
+        borderColor: "var(--border-color)",
+      }}
     >
       {/* Draggable title bar */}
       <div
-        className="flex items-center justify-between h-8 px-3 draggable"
+        className="flex items-center justify-between h-10 px-3 draggable"
         style={{ WebkitAppRegion: "drag" }} // Make the title bar draggable in Electron
       >
         <div className="flex items-center">
-          <FaMusic className={`text-${theme.colors.primary.main} mr-2`} />
-          <span className={`text-${theme.colors.text.primary} font-medium`}>
-            Music Player
+          <FaMusic className="mr-2" style={{ color: "var(--accent-color)" }} />
+          <span
+            className="font-medium"
+            style={{ color: "var(--text-primary)" }}
+          >
+            FaiXaL Music Player
           </span>
         </div>
 
@@ -29,37 +34,42 @@ export const Topbar = () => {
         </div>
       </div>
 
-      {/* Search bar and user controls */}
-      <div className="flex items-center justify-between p-3">
-        <div className="relative w-1/3">
+      {/* Search bar and sidebar toggle */}
+      <div className="flex items-center p-3">
+        {/* Sidebar toggle button */}
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-md hover:bg-gray-700 mr-2 non-draggable"
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--text-muted)",
+            WebkitAppRegion: "no-drag",
+          }}
+          title={sidebarVisible ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {sidebarVisible ? <FaTimes size={16} /> : <FaBars size={16} />}
+        </button>
+
+        {/* Search bar */}
+        <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className={`text-${theme.colors.text.muted} text-sm`} />
+            <FaSearch
+              className="text-sm"
+              style={{ color: "var(--text-muted)" }}
+            />
           </div>
           <input
             type="text"
-            className={`block w-full pl-9 pr-3 py-1.5 border border-transparent rounded-md leading-5 bg-${theme.colors.background.tertiary} text-${theme.colors.text.secondary} placeholder-${theme.colors.text.muted} focus:outline-none focus:ring-1 focus:ring-${theme.colors.primary.main} focus:border-transparent text-sm`}
+            className="block w-full pl-9 pr-3 py-1.5 border border-transparent rounded-md leading-5 focus:outline-none focus:ring-1 focus:border-transparent text-sm"
+            style={{
+              backgroundColor: "var(--bg-tertiary)",
+              color: "var(--text-primary)",
+              borderColor: "transparent",
+            }}
             placeholder="Search songs, artists, or albums"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            className={`p-1.5 rounded-full hover:bg-${theme.colors.background.tertiary} text-${theme.colors.text.secondary} hover:text-${theme.colors.text.primary}`}
-          >
-            <FaBell className="h-4 w-4" />
-          </button>
-          <div className="flex items-center space-x-2">
-            <FaUserCircle
-              className={`h-6 w-6 text-${theme.colors.text.muted}`}
-            />
-            <span
-              className={`text-sm font-medium text-${theme.colors.text.secondary}`}
-            >
-              User
-            </span>
-          </div>
         </div>
       </div>
     </header>

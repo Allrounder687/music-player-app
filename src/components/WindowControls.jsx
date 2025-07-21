@@ -10,7 +10,8 @@ export const WindowControls = () => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Check if we're running in Electron - this won't change during component lifecycle
-  const isElectron = window.electron !== undefined;
+  const isElectron =
+    typeof window !== "undefined" && window.electron !== undefined;
 
   // Define handlers with useCallback to prevent unnecessary re-renders
   const handleMinimize = useCallback(() => {
@@ -73,33 +74,48 @@ export const WindowControls = () => {
 
   if (!isElectron) return null;
 
+  // Use inline styles for better theme compatibility
+  const buttonBaseStyle = {
+    width: "40px",
+    height: "30px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--text-secondary)",
+    backgroundColor: "transparent",
+    transition: "background-color 0.2s ease, color 0.2s ease",
+    border: "none",
+    outline: "none",
+    cursor: "pointer",
+  };
+
   return (
     <div className="flex items-center">
-      {/* Minimize button - using CSS variables for theme compatibility */}
+      {/* Minimize button */}
       <button
         onClick={handleMinimize}
-        className="p-2 hover:bg-gray-700 transition-colors"
-        style={{ color: "var(--text-secondary)" }}
+        style={buttonBaseStyle}
+        className="hover:bg-gray-700"
         title="Minimize"
       >
         <FaWindowMinimize />
       </button>
 
-      {/* Maximize/Restore button - using CSS variables for theme compatibility */}
+      {/* Maximize/Restore button */}
       <button
         onClick={handleMaximize}
-        className="p-2 hover:bg-gray-700 transition-colors"
-        style={{ color: "var(--text-secondary)" }}
+        style={buttonBaseStyle}
+        className="hover:bg-gray-700"
         title={isMaximized ? "Restore" : "Maximize"}
       >
         {isMaximized ? <FaWindowRestore /> : <FaWindowMaximize />}
       </button>
 
-      {/* Close button - always red on hover for consistency */}
+      {/* Close button - always red on hover */}
       <button
         onClick={handleClose}
-        className="p-2 hover:bg-red-600 hover:text-white transition-colors"
-        style={{ color: "var(--text-secondary)" }}
+        style={buttonBaseStyle}
+        className="hover:bg-red-600 hover:text-white"
         title="Close"
       >
         <FaTimes />

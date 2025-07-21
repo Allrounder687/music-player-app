@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMusic } from "../store/MusicContext";
-import { useTheme } from "../store/ThemeContext";
 import {
   FaPlay,
   FaPause,
@@ -24,7 +23,6 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
     addToPlaylist,
     addToQueue,
   } = useMusic();
-  const { theme } = useTheme();
 
   const [showPlaylistSubmenu, setShowPlaylistSubmenu] = useState(false);
   const [availablePlaylists, setAvailablePlaylists] = useState([]);
@@ -34,6 +32,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
   const menuStyle = {
     top: `${position.y}px`,
     left: `${position.x}px`,
+    backgroundColor: "var(--bg-secondary)",
+    borderColor: "var(--border-color)",
   };
 
   // Load playlists
@@ -86,32 +86,32 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
   const isCurrentlyPlaying = currentTrack?.id === track.id && isPlaying;
   const isFavorite = playlists.favorites.includes(track.id);
 
+  const menuItemStyle = {
+    color: "var(--text-primary)",
+    textAlign: "left",
+  };
+
+  const menuItemHoverClass = "hover:bg-gray-700";
+
   return (
     <div
       ref={menuRef}
-      className={`fixed z-50 bg-${
-        theme?.colors?.background?.secondary || "gray-800"
-      } border border-${
-        theme?.colors?.border?.main || "gray-700"
-      } rounded-lg shadow-lg overflow-hidden w-56`}
+      className="fixed z-50 border rounded-lg shadow-lg overflow-hidden w-56"
       style={menuStyle}
     >
       <div
-        className={`p-3 border-b border-${
-          theme?.colors?.border?.main || "gray-700"
-        }`}
+        className="p-3 border-b"
+        style={{ borderColor: "var(--border-color)" }}
       >
         <div
-          className={`font-medium text-${
-            theme?.colors?.text?.main || "white"
-          } truncate`}
+          className="font-medium truncate"
+          style={{ color: "var(--text-primary)" }}
         >
           {track.title}
         </div>
         <div
-          className={`text-sm text-${
-            theme?.colors?.text?.muted || "gray-400"
-          } truncate`}
+          className="text-sm truncate"
+          style={{ color: "var(--text-muted)" }}
         >
           {track.artist || "Unknown Artist"}
         </div>
@@ -120,11 +120,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
       <div className="py-1">
         <button
           onClick={handlePlayPause}
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           {isCurrentlyPlaying ? (
             <>
@@ -139,11 +136,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
 
         <button
           onClick={handleToggleFavorite}
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           {isFavorite ? (
             <>
@@ -161,11 +155,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
             addToQueue(track);
             onClose();
           }}
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           <FaList className="mr-3" /> Add to Queue
         </button>
@@ -175,11 +166,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
             addToQueue(track, true);
             onClose();
           }}
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           <FaPlay className="mr-3" /> Play Next
         </button>
@@ -187,11 +175,8 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
         <div className="relative">
           <button
             onClick={() => setShowPlaylistSubmenu(!showPlaylistSubmenu)}
-            className={`flex items-center w-full px-4 py-2 text-${
-              theme?.colors?.text?.main || "white"
-            } hover:bg-${
-              theme?.colors?.background?.hover || "gray-700"
-            } text-left justify-between`}
+            className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass} justify-between`}
+            style={menuItemStyle}
           >
             <div className="flex items-center">
               <FaPlus className="mr-3" /> Add to Playlist
@@ -201,31 +186,27 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
 
           {showPlaylistSubmenu && (
             <div
-              className={`absolute left-full top-0 bg-${
-                theme?.colors?.background?.secondary || "gray-800"
-              } border border-${
-                theme?.colors?.border?.main || "gray-700"
-              } rounded-lg shadow-lg overflow-hidden w-56 ml-1`}
+              className="absolute left-full top-0 border rounded-lg shadow-lg overflow-hidden w-56 ml-1"
+              style={{
+                backgroundColor: "var(--bg-secondary)",
+                borderColor: "var(--border-color)",
+              }}
             >
               {availablePlaylists.length > 0 ? (
                 availablePlaylists.map((playlist) => (
                   <button
                     key={playlist.id}
                     onClick={() => handleAddToPlaylist(playlist.id)}
-                    className={`flex items-center w-full px-4 py-2 text-${
-                      theme?.colors?.text?.main || "white"
-                    } hover:bg-${
-                      theme?.colors?.background?.hover || "gray-700"
-                    } text-left`}
+                    className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+                    style={menuItemStyle}
                   >
                     <FaList className="mr-3" /> {playlist.name}
                   </button>
                 ))
               ) : (
                 <div
-                  className={`px-4 py-2 text-${
-                    theme?.colors?.text?.muted || "gray-400"
-                  } text-sm`}
+                  className="px-4 py-2 text-sm"
+                  style={{ color: "var(--text-muted)" }}
                 >
                   No playlists available
                 </div>
@@ -236,32 +217,23 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
 
         <button
           onClick={handleShowInfo}
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           <FaInfoCircle className="mr-3" /> Track Info
         </button>
 
         <button
-          className={`flex items-center w-full px-4 py-2 text-${
-            theme?.colors?.text?.main || "white"
-          } hover:bg-${
-            theme?.colors?.background?.hover || "gray-700"
-          } text-left`}
+          className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+          style={menuItemStyle}
         >
           <FaShare className="mr-3" /> Share
         </button>
 
         {track.filePath && (
           <button
-            className={`flex items-center w-full px-4 py-2 text-${
-              theme?.colors?.text?.main || "white"
-            } hover:bg-${
-              theme?.colors?.background?.hover || "gray-700"
-            } text-left`}
+            className={`flex items-center w-full px-4 py-2 ${menuItemHoverClass}`}
+            style={menuItemStyle}
           >
             <FaDownload className="mr-3" /> Download
           </button>
