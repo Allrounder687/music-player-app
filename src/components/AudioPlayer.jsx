@@ -217,16 +217,18 @@ export const AudioPlayer = () => {
     };
   }, [isPlaying]); // Only depend on isPlaying
 
+  // Refs for tracking play operation state
+  const isPlayOperationInProgressRef = useRef(false);
+  const currentPlayStateRef = useRef(isPlaying);
+
+  // Update the current play state ref when isPlaying changes
+  useEffect(() => {
+    currentPlayStateRef.current = isPlaying;
+  }, [isPlaying]);
+
   // Handle play/pause - separate from the audio URL effect to avoid race conditions
   useEffect(() => {
     if (!audioRef.current || !audioUrl || isLoading) return;
-
-    // Use a ref to track if we're in the middle of a play operation to prevent race conditions
-    const isPlayOperationInProgressRef = useRef(false);
-
-    // Keep track of the current play state to prevent auto-pausing
-    const currentPlayStateRef = useRef(isPlaying);
-    currentPlayStateRef.current = isPlaying;
 
     const playAudio = async () => {
       if (isPlaying) {

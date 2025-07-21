@@ -66,6 +66,43 @@ export const isAudioFile = (file) => {
 };
 
 /**
+ * Extracts metadata from a file using Electron's audio API
+ * @param {Object} track - The track object to enhance with metadata
+ * @param {string} filePath - Path to the audio file
+ * @returns {Promise<Object>} - Enhanced track object with metadata
+ */
+const enhanceTrackWithMetadata = async (track, filePath) => {
+  if (!window.electron?.audio || !filePath) {
+    return track;
+  }
+
+  try {
+    console.log(`Getting metadata for imported file: ${filePath}`);
+    const result = await window.electron.audio.getMetadata(filePath);
+
+    if (result.success && result.metadata) {
+      // Update track with metadata
+      track.title = result.metadata.title || track.title;
+      track.artist = result.metadata.artist || track.artist;
+      track.album = result.metadata.album || track.album;
+      track.duration = result.metadata.duration || track.duration;
+      track.genre = result.metadata.genre;
+      track.year = result.metadata.year;
+
+      // Set cover art if available
+      if (result.metadata.coverArt) {
+        track.imageUrl = result.metadata.coverArt;
+        console.log(`Cover art found for: ${track.title}`);
+      }
+    }
+  } catch (metadataError) {
+    console.error("Error getting metadata:", metadataError);
+  }
+
+  return track;
+};
+
+/**
  * Parses metadata from audio files
  * @param {File} file - The audio file
  * @returns {Promise<Object>} The parsed metadata
@@ -116,33 +153,20 @@ export const parseAudioMetadata = async (file) => {
         // Store the file object for direct access
         file: fileObject,
       };
-      
-      // If we're in Electron, try to get metadata including cover art
-      if (window.electron?.audio) {
-        try {
-          const filePath = file.path || file.webkitRelativePath;
-          if (filePath) {
-            console.log(`Getting metadata for imported file: ${filePath}`);
-            const result = await window.electron.audio.getMetadata(filePath);
-            if (result.success && result.metadata) {
-              // Update track with metadata
-              track.title = result.metadata.title || track.title;
-              track.artist = result.metadata.artist || track.artist;
-              track.album = result.metadata.album || track.album;
-              track.duration = result.metadata.duration || track.duration;
-              track.genre = result.metadata.genre;
-              track.year = result.metadata.year;
-              
-              // Set cover art if available
-              if (result.metadata.coverArt) {
-                track.imageUrl = result.metadata.coverArt;
-                console.log(`Cover art found for: ${track.title}`);
-              }
-            }
-          }
-        } catch (metadataError) {
-          console.error("Error getting metadata:", metadataError);
-        }
+
+      // Resolve with the basic track first
+      const filePath = file.path || file.webkitRelativePath;
+
+      // If we have a file path and we're in Electron, enhance the track with metadata
+      if (filePath && window.electron?.audio) {
+        // Enhance the track with metadata after resolving
+        enhanceTrackWithMetadata(track, filePath)
+          .then((enhancedTrack) => {
+            // No need to do anything here, the track object is already enhanced
+          })
+          .catch((err) => {
+            console.error("Error enhancing track with metadata:", err);
+          });
       }
 
       resolve(track);
@@ -151,8 +175,6 @@ export const parseAudioMetadata = async (file) => {
     // Handle errors
     audio.addEventListener("error", (e) => {
       console.error(`Error loading audio file: ${file.name}`, e.target.error);
-      // Don't revoke the URL as we need it for playback
-      // URL.revokeObjectURL(url);
 
       // Even if we can't load metadata, still create a basic track
       const filename = file.name;
@@ -176,33 +198,20 @@ export const parseAudioMetadata = async (file) => {
         // Store the file object for direct access
         file: fileObject,
       };
-      
-      // If we're in Electron, try to get metadata including cover art
-      if (window.electron?.audio) {
-        try {
-          const filePath = file.path || file.webkitRelativePath;
-          if (filePath) {
-            console.log(`Getting metadata for imported file: ${filePath}`);
-            const result = await window.electron.audio.getMetadata(filePath);
-            if (result.success && result.metadata) {
-              // Update track with metadata
-              track.title = result.metadata.title || track.title;
-              track.artist = result.metadata.artist || track.artist;
-              track.album = result.metadata.album || track.album;
-              track.duration = result.metadata.duration || track.duration;
-              track.genre = result.metadata.genre;
-              track.year = result.metadata.year;
-              
-              // Set cover art if available
-              if (result.metadata.coverArt) {
-                track.imageUrl = result.metadata.coverArt;
-                console.log(`Cover art found for: ${track.title}`);
-              }
-            }
-          }
-        } catch (metadataError) {
-          console.error("Error getting metadata:", metadataError);
-        }
+
+      // Resolve with the basic track
+      const filePath = file.path || file.webkitRelativePath;
+
+      // If we have a file path and we're in Electron, enhance the track with metadata
+      if (filePath && window.electron?.audio) {
+        // Enhance the track with metadata after resolving
+        enhanceTrackWithMetadata(track, filePath)
+          .then((enhancedTrack) => {
+            // No need to do anything here, the track object is already enhanced
+          })
+          .catch((err) => {
+            console.error("Error enhancing track with metadata:", err);
+          });
       }
 
       resolve(track);
@@ -214,8 +223,6 @@ export const parseAudioMetadata = async (file) => {
     // Set a timeout in case the audio element gets stuck
     const timeout = setTimeout(() => {
       console.warn(`Timeout loading metadata for: ${file.name}`);
-      // Don't revoke the URL as we need it for playback
-      // URL.revokeObjectURL(url);
 
       // Create a basic track with default values
       const filename = file.name;
@@ -238,6 +245,21 @@ export const parseAudioMetadata = async (file) => {
         // Store the file object for direct access
         file: fileObject,
       };
+
+      // Resolve with the basic track
+      const filePath = file.path || file.webkitRelativePath;
+
+      // If we have a file path and we're in Electron, enhance the track with metadata
+      if (filePath && window.electron?.audio) {
+        // Enhance the track with metadata after resolving
+        enhanceTrackWithMetadata(track, filePath)
+          .then((enhancedTrack) => {
+            // No need to do anything here, the track object is already enhanced
+          })
+          .catch((err) => {
+            console.error("Error enhancing track with metadata:", err);
+          });
+      }
 
       resolve(track);
     }, 5000); // 5 second timeout
