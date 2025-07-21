@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
+import { LibraryToolbar } from "../components/LibraryToolbar";
 import {
   FaPlay,
   FaMusic,
@@ -202,6 +203,22 @@ export const Library = () => {
     }
   };
 
+  // Delete selected tracks
+  const deleteSelectedTracks = () => {
+    if (selectedTracks.length > 0) {
+      if (
+        confirm(
+          `Are you sure you want to delete ${selectedTracks.length} tracks?`
+        )
+      ) {
+        selectedTracks.forEach((trackId) => {
+          deleteTrack(trackId);
+        });
+        setSelectedTracks([]);
+      }
+    }
+  };
+
   // Handle context menu
   const handleContextMenu = (e, track) => {
     e.preventDefault();
@@ -236,6 +253,18 @@ export const Library = () => {
     setSelectedTracks([]);
   };
 
+  // Toggle view mode
+  const toggleView = (viewMode) => {
+    setView(viewMode);
+    localStorage.setItem("musicPlayerViewMode", viewMode);
+  };
+
+  // Toggle multi-select mode
+  const toggleMultiSelectMode = () => {
+    setMultiSelectMode(!multiSelectMode);
+    if (multiSelectMode) setSelectedTracks([]);
+  };
+
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -256,258 +285,52 @@ export const Library = () => {
 
   return (
     <div
-      className={`p-6 h-full overflow-y-auto bg-${
-        theme?.colors?.background?.main || "gray-900"
-      }`}
+      className="p-6 h-full overflow-y-auto"
+      style={{ backgroundColor: "var(--bg-primary)" }}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1
-            className={`text-3xl font-bold text-${
-              theme?.colors?.text?.main || "white"
-            }`}
-          >
-            Library
-          </h1>
-          <p className={`text-${theme?.colors?.text?.muted || "gray-400"}`}>
+          <h1 className="text-3xl font-bold text-white">Library</h1>
+          <p style={{ color: "var(--text-muted)" }}>
             {filteredTracks.length} tracks
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              placeholder="Search library..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className={`w-full px-4 py-2 rounded-full bg-${
-                theme?.colors?.background?.secondary || "gray-800"
-              } text-${theme?.colors?.text?.main || "white"} border border-${
-                theme?.colors?.border?.main || "gray-700"
-              } focus:outline-none focus:ring-2 focus:ring-${
-                theme?.colors?.primary?.main || "purple-500"
-              }`}
-            />
-            {filter && (
-              <button
-                onClick={() => setFilter("")}
-                className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-${
-                  theme?.colors?.text?.muted || "gray-400"
-                } hover:text-${theme?.colors?.text?.main || "white"}`}
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Genre filter */}
-          <div className="relative">
-            <button
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className={`px-4 py-2 rounded-full bg-${
-                theme?.colors?.background?.secondary || "gray-800"
-              } text-${theme?.colors?.text?.main || "white"} border border-${
-                theme?.colors?.border?.main || "gray-700"
-              } flex items-center`}
-            >
-              <FaFilter className="mr-2" />
-              {selectedGenre === "all" ? "All Genres" : selectedGenre}
-            </button>
-
-            {showFilterMenu && (
-              <div
-                className={`absolute top-full left-0 mt-1 bg-${
-                  theme?.colors?.background?.secondary || "gray-800"
-                } border border-${
-                  theme?.colors?.border?.main || "gray-700"
-                } rounded-lg shadow-lg z-10 w-48 max-h-60 overflow-y-auto`}
-              >
-                {genres.map((genre) => (
-                  <button
-                    key={genre}
-                    onClick={() => {
-                      setSelectedGenre(genre);
-                      setShowFilterMenu(false);
-                    }}
-                    className={`block w-full text-left px-4 py-2 hover:bg-${
-                      theme?.colors?.background?.hover || "gray-700"
-                    } ${
-                      selectedGenre === genre
-                        ? `bg-${
-                            theme?.colors?.primary?.main || "purple-600"
-                          } text-white`
-                        : `text-${theme?.colors?.text?.main || "white"}`
-                    }`}
-                  >
-                    {genre === "all" ? "All Genres" : genre}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* View toggle */}
-          <div
-            className={`flex rounded-full bg-${
-              theme?.colors?.background?.secondary || "gray-800"
-            } p-1`}
-          >
-            <button
-              onClick={() => {
-                setView("grid");
-                localStorage.setItem("musicPlayerViewMode", "grid");
-              }}
-              className={`px-3 py-1 rounded-full ${
-                view === "grid"
-                  ? `bg-${
-                      theme?.colors?.primary?.main || "purple-600"
-                    } text-white`
-                  : `text-${theme?.colors?.text?.muted || "gray-400"}`
-              }`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => {
-                setView("list");
-                localStorage.setItem("musicPlayerViewMode", "list");
-              }}
-              className={`px-3 py-1 rounded-full ${
-                view === "list"
-                  ? `bg-${
-                      theme?.colors?.primary?.main || "purple-600"
-                    } text-white`
-                  : `text-${theme?.colors?.text?.muted || "gray-400"}`
-              }`}
-            >
-              List
-            </button>
-          </div>
-
-          {/* Multi-select toggle */}
-          <button
-            onClick={() => {
-              setMultiSelectMode(!multiSelectMode);
-              if (multiSelectMode) setSelectedTracks([]);
-            }}
-            className={`px-4 py-2 rounded-full ${
-              multiSelectMode
-                ? `bg-${
-                    theme?.colors?.primary?.main || "purple-600"
-                  } text-white`
-                : `bg-${
-                    theme?.colors?.background?.secondary || "gray-800"
-                  } text-${
-                    theme?.colors?.text?.main || "white"
-                  } border border-${theme?.colors?.border?.main || "gray-700"}`
-            } flex items-center`}
-          >
-            {multiSelectMode ? (
-              <FaCheck className="mr-2" />
-            ) : (
-              <FaPlus className="mr-2" />
-            )}
-            {multiSelectMode ? "Done" : "Select"}
-          </button>
-
-          {/* Play buttons */}
-          <div className="flex space-x-2">
-            <button
-              onClick={playAllTracks}
-              disabled={filteredTracks.length === 0}
-              className={`px-4 py-2 rounded-full bg-${
-                theme?.colors?.primary?.main || "purple-600"
-              } hover:bg-${
-                theme?.colors?.primary?.dark || "purple-700"
-              } text-white flex items-center justify-center ${
-                filteredTracks.length === 0
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              <FaPlay className="mr-2" /> Play All
-            </button>
-
-            <button
-              onClick={playRandomTracks}
-              disabled={filteredTracks.length === 0}
-              className={`px-4 py-2 rounded-full bg-${
-                theme?.colors?.background?.secondary || "gray-800"
-              } hover:bg-${
-                theme?.colors?.background?.hover || "gray-700"
-              } text-${
-                theme?.colors?.text?.main || "white"
-              } flex items-center justify-center ${
-                filteredTracks.length === 0
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              <FaRandom className="mr-2" /> Shuffle
-            </button>
-          </div>
-
-          {/* Selection actions */}
-          {multiSelectMode && selectedTracks.length > 0 && (
-            <div className="flex space-x-2">
-              <button
-                onClick={playSelectedTracks}
-                className={`px-4 py-2 rounded-full bg-${
-                  theme?.colors?.primary?.main || "purple-600"
-                } hover:bg-${
-                  theme?.colors?.primary?.dark || "purple-700"
-                } text-white flex items-center justify-center`}
-              >
-                <FaPlay className="mr-2" /> Play Selected
-              </button>
-
-              <button
-                onClick={addSelectedToFavorites}
-                className={`px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-center`}
-              >
-                <FaHeart className="mr-2" /> Add to Favorites
-              </button>
-
-              <button
-                onClick={() => setShowCreatePlaylistModal(true)}
-                className={`px-4 py-2 rounded-full bg-${
-                  theme?.colors?.background?.secondary || "gray-800"
-                } hover:bg-${
-                  theme?.colors?.background?.hover || "gray-700"
-                } text-${
-                  theme?.colors?.text?.main || "white"
-                } flex items-center justify-center`}
-              >
-                <FaPlus className="mr-2" /> Create Playlist
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Library Toolbar */}
+        <LibraryToolbar
+          selectedTracks={selectedTracks}
+          filteredTracks={filteredTracks}
+          onPlayAll={playAllTracks}
+          onPlaySelected={playSelectedTracks}
+          onPlayRandom={playRandomTracks}
+          onSelectAll={selectAllTracks}
+          onDeleteSelected={deleteSelectedTracks}
+          onAddToFavorites={addSelectedToFavorites}
+          onCreatePlaylist={() => setShowCreatePlaylistModal(true)}
+          multiSelectMode={multiSelectMode}
+          onToggleMultiSelect={toggleMultiSelectMode}
+          onToggleView={toggleView}
+          currentView={view}
+          onFilterChange={setFilter}
+          filter={filter}
+        />
       </div>
 
       {/* Create Playlist Modal */}
       {showCreatePlaylistModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
           <div
-            className={`bg-${
-              theme?.colors?.background?.secondary || "gray-800"
-            } rounded-xl p-6 w-full max-w-md`}
+            className="bg-gray-800 rounded-xl p-6 w-full max-w-md"
+            style={{ backgroundColor: "var(--bg-secondary)" }}
           >
-            <h2
-              className={`text-2xl font-bold mb-6 text-${
-                theme?.colors?.text?.main || "white"
-              }`}
-            >
+            <h2 className="text-2xl font-bold mb-6 text-white">
               Create Playlist from Selected Tracks
             </h2>
 
             <div className="mb-6">
               <label
-                className={`block text-sm font-medium text-${
-                  theme?.colors?.text?.muted || "gray-300"
-                } mb-2`}
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--text-muted)" }}
               >
                 Playlist Name
               </label>
@@ -515,47 +338,37 @@ export const Library = () => {
                 type="text"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                className={`w-full bg-${
-                  theme?.colors?.background?.tertiary || "gray-700"
-                } border border-${
-                  theme?.colors?.border?.main || "gray-600"
-                } rounded-lg px-4 py-2 text-${
-                  theme?.colors?.text?.main || "white"
-                } focus:ring-2 focus:ring-${
-                  theme?.colors?.primary?.main || "purple-500"
-                } focus:border-transparent`}
+                className="w-full rounded-lg px-4 py-2 text-white focus:ring-2 focus:border-transparent"
+                style={{
+                  backgroundColor: "var(--bg-tertiary)",
+                  borderColor: "var(--border-color)",
+                }}
                 placeholder="My New Playlist"
                 autoFocus
               />
             </div>
 
-            <div
-              className={`mb-6 text-${
-                theme?.colors?.text?.muted || "gray-400"
-              }`}
-            >
+            <div className="mb-6" style={{ color: "var(--text-muted)" }}>
               {selectedTracks.length} tracks will be added to this playlist.
             </div>
 
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setShowCreatePlaylistModal(false)}
-                className={`px-4 py-2 text-${
-                  theme?.colors?.text?.muted || "gray-400"
-                } hover:text-${theme?.colors?.text?.main || "white"}`}
+                className="px-4 py-2 hover:text-white"
+                style={{ color: "var(--text-muted)" }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreatePlaylist}
                 disabled={!newPlaylistName.trim()}
-                className={`px-6 py-2 rounded-full bg-${
-                  theme?.colors?.primary?.main || "purple-600"
-                } hover:bg-${
-                  theme?.colors?.primary?.dark || "purple-700"
-                } text-white ${
-                  !newPlaylistName.trim() ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className="px-6 py-2 rounded-full text-white"
+                style={{
+                  backgroundColor: "var(--accent-color)",
+                  opacity: !newPlaylistName.trim() ? 0.5 : 1,
+                  cursor: !newPlaylistName.trim() ? "not-allowed" : "pointer",
+                }}
               >
                 Create Playlist
               </button>
@@ -576,21 +389,15 @@ export const Library = () => {
       {filteredTracks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <FaMusic
-            className={`text-5xl text-${
-              theme?.colors?.text?.muted || "gray-600"
-            } mb-4`}
+            className="text-5xl mb-4"
+            style={{ color: "var(--text-muted)" }}
           />
-          <h3
-            className={`text-xl font-medium mb-2 text-${
-              theme?.colors?.text?.main || "white"
-            }`}
-          >
+          <h3 className="text-xl font-medium mb-2 text-white">
             {filter ? "No matching tracks found" : "Your library is empty"}
           </h3>
           <p
-            className={`text-${
-              theme?.colors?.text?.muted || "gray-400"
-            } text-center max-w-md`}
+            className="text-center max-w-md"
+            style={{ color: "var(--text-muted)" }}
           >
             {filter
               ? `Try adjusting your search query.`
@@ -603,13 +410,43 @@ export const Library = () => {
           {filteredTracks.map((track) => (
             <div
               key={track.id}
-              className={`bg-${
-                theme?.colors?.background?.secondary || "gray-800"
-              } rounded-lg overflow-hidden hover:bg-${
-                theme?.colors?.background?.hover || "gray-700"
-              } transition-colors cursor-pointer group`}
+              className="rounded-lg overflow-hidden transition-colors cursor-pointer group relative"
+              style={{ backgroundColor: "var(--bg-secondary)" }}
             >
-              <div className="relative" onClick={() => playTrack(track)}>
+              {/* Selection checkbox - only visible in multi-select mode */}
+              {multiSelectMode && (
+                <div
+                  className="absolute top-2 left-2 z-10 p-1 rounded-full"
+                  style={{
+                    backgroundColor: selectedTracks.includes(track.id)
+                      ? "var(--accent-color)"
+                      : "rgba(0, 0, 0, 0.5)",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTrackSelection(track.id);
+                  }}
+                >
+                  <FaCheck
+                    className={`text-white ${
+                      selectedTracks.includes(track.id)
+                        ? "opacity-100"
+                        : "opacity-0"
+                    }`}
+                  />
+                </div>
+              )}
+
+              <div
+                className="relative"
+                onClick={(e) => {
+                  if (multiSelectMode) {
+                    toggleTrackSelection(track.id, e);
+                  } else {
+                    playTrack(track);
+                  }
+                }}
+              >
                 {track.imageUrl ? (
                   <img
                     src={track.imageUrl}
@@ -618,43 +455,37 @@ export const Library = () => {
                   />
                 ) : (
                   <div
-                    className={`w-full aspect-square bg-${
-                      theme?.colors?.background?.tertiary || "gray-700"
-                    } flex items-center justify-center`}
+                    className="w-full aspect-square flex items-center justify-center"
+                    style={{ backgroundColor: "var(--bg-tertiary)" }}
                   >
                     <FaMusic
-                      className={`text-4xl text-${
-                        theme?.colors?.text?.muted || "gray-500"
-                      }`}
+                      className="text-4xl"
+                      style={{ color: "var(--text-muted)" }}
                     />
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all">
-                    <button
-                      className={`bg-${
-                        theme?.colors?.primary?.main || "purple-600"
-                      } text-white rounded-full p-3`}
-                    >
-                      <FaPlay className="h-6 w-6" />
-                    </button>
+                    {!multiSelectMode && (
+                      <button
+                        className="rounded-full p-3 text-white"
+                        style={{ backgroundColor: "var(--accent-color)" }}
+                      >
+                        <FaPlay className="h-6 w-6" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="p-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3
-                      className={`font-medium truncate text-${
-                        theme?.colors?.text?.main || "white"
-                      }`}
-                    >
+                    <h3 className="font-medium truncate text-white">
                       {track.title}
                     </h3>
                     <p
-                      className={`text-sm text-${
-                        theme?.colors?.text?.muted || "gray-400"
-                      } truncate`}
+                      className="text-sm truncate"
+                      style={{ color: "var(--text-muted)" }}
                     >
                       {track.artist || "Unknown Artist"}
                     </p>
@@ -687,9 +518,8 @@ export const Library = () => {
                   </div>
                 </div>
                 <div
-                  className={`mt-2 text-xs text-${
-                    theme?.colors?.text?.muted || "gray-500"
-                  } flex justify-between`}
+                  className="mt-2 text-xs flex justify-between"
+                  style={{ color: "var(--text-muted)" }}
                 >
                   <span>{track.album || "Unknown Album"}</span>
                   <span>{formatTime(track.duration)}</span>
@@ -701,19 +531,42 @@ export const Library = () => {
       ) : (
         // List view
         <div
-          className={`bg-${
-            theme?.colors?.background?.secondary || "gray-800"
-          } rounded-lg overflow-hidden`}
+          className="rounded-lg overflow-hidden"
+          style={{ backgroundColor: "var(--bg-secondary)" }}
         >
           {/* Table header */}
           <div
-            className={`grid grid-cols-12 gap-2 px-4 py-3 border-b border-${
-              theme?.colors?.border?.main || "gray-700"
-            } text-${
-              theme?.colors?.text?.muted || "gray-400"
-            } text-sm font-medium`}
+            className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-medium"
+            style={{
+              borderBottom: "1px solid var(--border-color)",
+              color: "var(--text-muted)",
+            }}
           >
-            <div className="col-span-1">#</div>
+            <div className="col-span-1">
+              {multiSelectMode ? (
+                <button
+                  onClick={selectAllTracks}
+                  className="p-1 rounded"
+                  style={{
+                    backgroundColor:
+                      selectedTracks.length === filteredTracks.length
+                        ? "var(--accent-color)"
+                        : "transparent",
+                  }}
+                >
+                  <FaCheck
+                    className={`text-white ${
+                      selectedTracks.length === filteredTracks.length
+                        ? "opacity-100"
+                        : "opacity-50"
+                    }`}
+                    size={12}
+                  />
+                </button>
+              ) : (
+                "#"
+              )}
+            </div>
             <div className="col-span-4">
               <button
                 onClick={() => handleSortChange("title")}
@@ -756,28 +609,56 @@ export const Library = () => {
           {filteredTracks.map((track, index) => (
             <div
               key={track.id}
-              onClick={() => playTrack(track)}
-              className={`grid grid-cols-12 gap-2 px-4 py-2 hover:bg-${
-                theme?.colors?.background?.hover || "gray-700"
-              } ${
-                currentTrack?.id === track.id
-                  ? `bg-${theme?.colors?.background?.hover || "gray-700/50"}`
+              onClick={(e) => {
+                if (multiSelectMode) {
+                  toggleTrackSelection(track.id, e);
+                } else {
+                  playTrack(track);
+                }
+              }}
+              className={`grid grid-cols-12 gap-2 px-4 py-2 cursor-pointer text-white ${
+                selectedTracks.includes(track.id)
+                  ? "bg-purple-900 bg-opacity-30"
+                  : currentTrack?.id === track.id
+                  ? "bg-gray-700/50"
                   : ""
-              } cursor-pointer text-${theme?.colors?.text?.main || "white"}`}
+              }`}
+              style={{
+                backgroundColor: selectedTracks.includes(track.id)
+                  ? "var(--accent-color-dark)"
+                  : currentTrack?.id === track.id
+                  ? "var(--bg-hover)"
+                  : "transparent",
+                opacity: selectedTracks.includes(track.id) ? 0.9 : 1,
+              }}
+              onContextMenu={(e) => handleContextMenu(e, track)}
             >
               <div className="col-span-1 flex items-center">
-                {currentTrack?.id === track.id ? (
+                {multiSelectMode ? (
+                  <div
+                    className="p-1 rounded"
+                    style={{
+                      backgroundColor: selectedTracks.includes(track.id)
+                        ? "var(--accent-color)"
+                        : "transparent",
+                    }}
+                  >
+                    <FaCheck
+                      className={`text-white ${
+                        selectedTracks.includes(track.id)
+                          ? "opacity-100"
+                          : "opacity-50"
+                      }`}
+                      size={12}
+                    />
+                  </div>
+                ) : currentTrack?.id === track.id ? (
                   <FaPlay
-                    className={`text-${
-                      theme?.colors?.primary?.main || "purple-500"
-                    } text-sm`}
+                    className="text-sm"
+                    style={{ color: "var(--accent-color)" }}
                   />
                 ) : (
-                  <span
-                    className={`text-${
-                      theme?.colors?.text?.muted || "gray-400"
-                    }`}
-                  >
+                  <span style={{ color: "var(--text-muted)" }}>
                     {index + 1}
                   </span>
                 )}
@@ -785,32 +666,32 @@ export const Library = () => {
               <div className="col-span-4 truncate flex items-center">
                 <span
                   className={
-                    currentTrack?.id === track.id
-                      ? `text-${theme?.colors?.primary?.main || "purple-500"}`
-                      : ""
+                    currentTrack?.id === track.id ? "text-purple-500" : ""
                   }
+                  style={{
+                    color:
+                      currentTrack?.id === track.id
+                        ? "var(--accent-color)"
+                        : "inherit",
+                  }}
                 >
                   {track.title}
                 </span>
               </div>
               <div
-                className={`col-span-3 truncate text-${
-                  theme?.colors?.text?.muted || "gray-400"
-                }`}
+                className="col-span-3 truncate"
+                style={{ color: "var(--text-muted)" }}
               >
                 {track.artist || "Unknown Artist"}
               </div>
               <div
-                className={`col-span-3 truncate text-${
-                  theme?.colors?.text?.muted || "gray-400"
-                }`}
+                className="col-span-3 truncate"
+                style={{ color: "var(--text-muted)" }}
               >
                 {track.album || "Unknown Album"}
               </div>
               <div className="col-span-1 flex items-center justify-end gap-3">
-                <span
-                  className={`text-${theme?.colors?.text?.muted || "gray-400"}`}
-                >
+                <span style={{ color: "var(--text-muted)" }}>
                   {formatTime(track.duration)}
                 </span>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
@@ -830,16 +711,11 @@ export const Library = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (
-                        confirm("Are you sure you want to delete this track?")
-                      ) {
-                        deleteTrack(track.id);
-                      }
+                      handleContextMenu(e, track);
                     }}
-                    className="text-red-500 hover:text-red-400 transition-colors"
-                    title="Delete track"
+                    className="text-gray-400 hover:text-white transition-colors"
                   >
-                    <FaTrash />
+                    <FaEllipsisH />
                   </button>
                 </div>
               </div>

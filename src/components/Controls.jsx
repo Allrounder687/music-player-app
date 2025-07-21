@@ -10,7 +10,6 @@ import {
   FaRandom,
   FaRedo,
 } from "react-icons/fa";
-import { Slider } from "./Slider";
 import { SnakeSeekbar } from "./SnakeSeekbar";
 import { useMusic } from "../store/MusicContext";
 import { useTheme } from "../store/ThemeContext";
@@ -168,15 +167,11 @@ export const Controls = ({
   }, []);
 
   return (
-    <div
-      className={`bg-${theme.colors.background.secondary} p-3 border-t border-${theme.colors.border}`}
-    >
+    <div className="bg-gray-800 p-3 border-t border-gray-700">
       <div className="max-w-screen-lg mx-auto">
         {/* Progress Bar */}
         <div className="flex items-center mb-2">
-          <span
-            className={`text-xs text-${theme.colors.text.muted} w-12 text-right`}
-          >
+          <span className="text-xs text-gray-400 w-12 text-right">
             {formatTime(currentTime)}
           </span>
           <div className="flex-1 mx-2 overflow-hidden">
@@ -187,7 +182,7 @@ export const Controls = ({
               className="h-6"
             />
           </div>
-          <span className={`text-xs text-${theme.colors.text.muted} w-12`}>
+          <span className="text-xs text-gray-400 w-12">
             {formatTime(duration)}
           </span>
         </div>
@@ -195,30 +190,31 @@ export const Controls = ({
         {/* Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
+            {/* Shuffle button with CSS variables for theme compatibility */}
             <button
               onClick={toggleShuffle}
-              className={`${
-                shuffle
-                  ? `text-${theme.colors.primary.main}`
-                  : `text-${theme.colors.text.muted}`
-              } 
-                hover:text-${theme.colors.text.primary} transition-colors`}
+              className="hover:text-white transition-colors"
               title={shuffle ? "Shuffle is on" : "Shuffle is off"}
+              style={{
+                color: shuffle ? "var(--accent-color)" : "var(--text-muted)",
+              }}
             >
               <FaRandom />
             </button>
+
+            {/* Repeat button with CSS variables for theme compatibility */}
             <button
               onClick={toggleRepeat}
-              className={`${
-                repeat
-                  ? `text-${theme.colors.primary.main}`
-                  : `text-${theme.colors.text.muted}`
-              } 
-                hover:text-${theme.colors.text.primary} transition-colors`}
+              className="hover:text-white transition-colors"
               title={repeat ? "Repeat is on" : "Repeat is off"}
+              style={{
+                color: repeat ? "var(--accent-color)" : "var(--text-muted)",
+              }}
             >
               <FaRedo />
             </button>
+
+            {/* Restart button with CSS variables for theme compatibility */}
             <button
               onClick={() => {
                 setCurrentTime(0);
@@ -226,8 +222,9 @@ export const Controls = ({
                   setGlobalCurrentTime(0);
                 }
               }}
-              className={`text-${theme.colors.text.muted} hover:text-${theme.colors.text.primary} transition-colors`}
+              className="hover:text-white transition-colors"
               title="Restart track"
+              style={{ color: "var(--text-muted)" }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -241,27 +238,27 @@ export const Controls = ({
           </div>
 
           <div className="flex items-center space-x-6">
+            {/* Previous button */}
             <button
               onClick={onPrevious}
-              className={`text-${theme.colors.text.secondary} hover:text-${theme.colors.text.primary} p-2`}
+              className="p-2 hover:text-white transition-colors"
+              style={{ color: "var(--text-secondary)" }}
             >
               <FaStepBackward className="h-5 w-5" />
             </button>
+
+            {/* Play/Pause button */}
             <button
               onClick={onPlayPause}
-              className={`bg-${theme.colors.primary.main} text-${
-                theme.colors.text.primary
-              } rounded-full h-10 w-10 flex items-center justify-center hover:bg-${
-                theme.colors.primary.light
-              } transition-transform ${
-                isPlaying && audioData?.beatDetected ? "scale-110" : ""
-              }`}
+              className="rounded-full h-10 w-10 flex items-center justify-center transition-transform"
               style={{
+                backgroundColor: "var(--accent-color)",
+                color: "white",
                 boxShadow:
                   isPlaying && audioData?.bass > 0.1
                     ? `0 0 ${Math.floor(audioData.bass * 20)}px ${Math.floor(
                         audioData.bass * 10
-                      )}px rgba(168, 85, 247, ${audioData.bass * 0.8})`
+                      )}px var(--accent-color-light)`
                     : "none",
                 transform:
                   isPlaying && audioData?.beatDetected
@@ -276,19 +273,24 @@ export const Controls = ({
                 <FaPlay className="h-4 w-4 ml-1" />
               )}
             </button>
+
+            {/* Next button */}
             <button
               onClick={onNext}
-              className={`text-${theme.colors.text.secondary} hover:text-${theme.colors.text.primary} p-2`}
+              className="p-2 hover:text-white transition-colors"
+              style={{ color: "var(--text-secondary)" }}
             >
               <FaStepForward className="h-5 w-5" />
             </button>
           </div>
 
           <div className="flex items-center space-x-2 w-36 group relative">
+            {/* Volume button */}
             <button
               onClick={handleMuteToggle}
-              className={`text-${theme.colors.text.muted} hover:text-${theme.colors.text.primary}`}
+              className="hover:text-white transition-colors"
               title={isMuted ? "Unmute" : "Mute"}
+              style={{ color: "var(--text-muted)" }}
             >
               {isMuted ? (
                 <FaVolumeMute />
@@ -298,12 +300,16 @@ export const Controls = ({
                 <FaVolumeUp />
               )}
             </button>
+
             <div className="flex-1 relative">
-              {/* Simple static volume slider with no animations */}
+              {/* Volume slider */}
               <div className="relative h-2 bg-gray-700 rounded-full w-full">
                 <div
-                  className={`absolute left-0 top-0 h-full bg-${theme.colors.primary.main} rounded-full`}
-                  style={{ width: `${volume}%` }}
+                  className="absolute left-0 top-0 h-full rounded-full"
+                  style={{
+                    width: `${volume}%`,
+                    backgroundColor: "var(--accent-color)",
+                  }}
                 />
                 <input
                   type="range"
@@ -314,6 +320,8 @@ export const Controls = ({
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
+
+              {/* Volume tooltip */}
               <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                 {Math.round(volume)}%
               </div>

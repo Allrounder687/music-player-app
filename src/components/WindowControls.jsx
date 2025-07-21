@@ -5,10 +5,8 @@ import {
   FaWindowRestore,
   FaTimes,
 } from "react-icons/fa";
-import { useTheme } from "../store/ThemeContext";
 
 export const WindowControls = () => {
-  const { theme } = useTheme();
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Check if we're running in Electron - this won't change during component lifecycle
@@ -77,23 +75,31 @@ export const WindowControls = () => {
 
   return (
     <div className="flex items-center">
+      {/* Minimize button - using CSS variables for theme compatibility */}
       <button
         onClick={handleMinimize}
-        className={`p-2 hover:bg-${theme.colors.background.tertiary} text-${theme.colors.text.secondary}`}
+        className="p-2 hover:bg-gray-700 transition-colors"
+        style={{ color: "var(--text-secondary)" }}
         title="Minimize"
       >
         <FaWindowMinimize />
       </button>
+
+      {/* Maximize/Restore button - using CSS variables for theme compatibility */}
       <button
         onClick={handleMaximize}
-        className={`p-2 hover:bg-${theme.colors.background.tertiary} text-${theme.colors.text.secondary}`}
+        className="p-2 hover:bg-gray-700 transition-colors"
+        style={{ color: "var(--text-secondary)" }}
         title={isMaximized ? "Restore" : "Maximize"}
       >
         {isMaximized ? <FaWindowRestore /> : <FaWindowMaximize />}
       </button>
+
+      {/* Close button - always red on hover for consistency */}
       <button
         onClick={handleClose}
-        className={`p-2 hover:bg-red-600 text-${theme.colors.text.secondary} hover:text-white`}
+        className="p-2 hover:bg-red-600 hover:text-white transition-colors"
+        style={{ color: "var(--text-secondary)" }}
         title="Close"
       >
         <FaTimes />

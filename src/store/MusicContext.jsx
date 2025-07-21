@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+} from "react";
 
 const MusicContext = createContext();
 
@@ -84,6 +90,7 @@ const initialState = {
       },
     },
   },
+  waveSensitivity: 1, // Default sensitivity for wave visualization
 };
 
 function musicReducer(state, action) {
@@ -91,30 +98,50 @@ function musicReducer(state, action) {
     case "ADD_TO_QUEUE": {
       const { track, playNext = false } = action;
 
-      // Check if track is already in queue (we'll use this in future enhancements)
-      // const isInQueue = state.queue.some((t) => t.id === track.id);
+      // Check if track is already in queue
+      const isInQueue = state.queue.some((t) => t.id === track.id);
 
       let newQueue = [...state.queue];
       let newCurrentTrackIndex = state.currentTrackIndex;
 
-      if (playNext) {
-        // Add track right after the current track
-        if (state.currentTrackIndex >= 0) {
-          // If there's a current track playing, insert after it
-          newQueue.splice(state.currentTrackIndex + 1, 0, track);
-          // Current track index stays the same
-        } else {
-          // If no track is playing, add to the beginning
-          newQueue.unshift(track);
-          newCurrentTrackIndex = 0;
-        }
-      } else {
-        // Add track to the end of the queue
-        newQueue.push(track);
+      if (isInQueue) {
+        // If track is already in queue and playNext is true, move it to play next
+        if (playNext && state.currentTrackIndex >= 0) {
+          // Find the track in the queue
+          const trackIndex = newQueue.findIndex((t) => t.id === track.id);
 
-        // If this is the first track, set current track index
-        if (newQueue.length === 1) {
-          newCurrentTrackIndex = 0;
+          // Remove from current position
+          newQueue.splice(trackIndex, 1);
+
+          // If the removed track was before the current track, adjust the current track index
+          if (trackIndex < state.currentTrackIndex) {
+            newCurrentTrackIndex--;
+          }
+
+          // Add after current track
+          newQueue.splice(newCurrentTrackIndex + 1, 0, track);
+        }
+        // If not playNext, leave it where it is
+      } else {
+        if (playNext) {
+          // Add track right after the current track
+          if (state.currentTrackIndex >= 0) {
+            // If there's a current track playing, insert after it
+            newQueue.splice(state.currentTrackIndex + 1, 0, track);
+            // Current track index stays the same
+          } else {
+            // If no track is playing, add to the beginning
+            newQueue.unshift(track);
+            newCurrentTrackIndex = 0;
+          }
+        } else {
+          // Add track to the end of the queue
+          newQueue.push(track);
+
+          // If this is the first track, set current track index
+          if (newQueue.length === 1) {
+            newCurrentTrackIndex = 0;
+          }
         }
       }
 
@@ -124,6 +151,71 @@ function musicReducer(state, action) {
         currentTrackIndex: newCurrentTrackIndex,
       };
     }
+
+    case "REMOVE_FROM_QUEUE": {
+      const trackId = action.trackId;
+
+      // Find the track index in the queue
+      const trackIndex = state.queue.findIndex((track) => track.id === trackId);
+
+      // If track not found in queue, return state unchanged
+      if (trackIndex === -1) return state;
+
+      // Create a new queue without the track
+      const newQueue = [...state.queue];
+      newQueue.splice(trackIndex, 1);
+
+      // Adjust currentTrackIndex if needed
+      let newCurrentTrackIndex = state.currentTrackIndex;
+      let newCurrentTrack = state.currentTrack;
+
+      // If removing the current track
+      if (state.currentTrack && state.currentTrack.id === trackId) {
+        // If there are tracks left in the queue
+        if (newQueue.length > 0) {
+          // Use the same index if possible, or the next one
+          newCurrentTrackIndex = Math.min(trackIndex, newQueue.length - 1);
+          newCurrentTrack = newQueue[newCurrentTrackIndex];
+        } else {
+          // No tracks left in queue
+          newCurrentTrackIndex = -1;
+          newCurrentTrack = null;
+        }
+      }
+      // If removing a track before the current track
+      else if (trackIndex < state.currentTrackIndex) {
+        newCurrentTrackIndex = state.currentTrackIndex - 1;
+      }
+
+      return {
+        ...state,
+        queue: newQueue,
+        currentTrackIndex: newCurrentTrackIndex,
+        currentTrack: newCurrentTrack || state.currentTrack,
+        isPlaying: newCurrentTrack ? state.isPlaying : false,
+      };
+    }
+
+    case "CLEAR_QUEUE": {
+      // If there's a current track, keep only that track in the queue
+      if (state.currentTrack) {
+        return {
+          ...state,
+          queue: [state.currentTrack],
+          currentTrackIndex: 0,
+        };
+      }
+
+      // Otherwise, clear the queue completely
+      return {
+        ...state,
+        queue: [],
+        currentTrackIndex: -1,
+        currentTrack: null,
+        isPlaying: false,
+      };
+    }
+
     case "DELETE_TRACK": {
       const trackId = action.trackId;
 
@@ -590,6 +682,12 @@ function musicReducer(state, action) {
         audioData: action.data,
       };
 
+    case "SET_WAVE_SENSITIVITY":
+      return {
+        ...state,
+        waveSensitivity: action.sensitivity,
+      };
+
     default:
       return state;
   }
@@ -637,6 +735,8 @@ export const MusicProvider = ({ children }) => {
           isPlaying: false, // Always start paused for better UX
           currentTime: parsedState.currentTime || 0,
           queue: allTracks, // Use all tracks as the default queue
+          waveSensitivity:
+            parsedState.waveSensitivity || initialState.waveSensitivity,
         };
       }
     } catch (error) {
@@ -651,7 +751,7 @@ export const MusicProvider = ({ children }) => {
   useEffect(() => {
     // Extract custom tracks (non-sample tracks)
     const customTracks = state.tracks.filter(
-      (track) => !track.previewUrl.startsWith("/audio/")
+      (track) => !track.previewUrl?.startsWith("/audio/")
     );
 
     const stateToSave = {
@@ -664,6 +764,7 @@ export const MusicProvider = ({ children }) => {
       currentTrackId: state.currentTrack?.id,
       isPlaying: state.isPlaying,
       currentTime: state.currentTime,
+      waveSensitivity: state.waveSensitivity,
     };
 
     localStorage.setItem("musicPlayerState", JSON.stringify(stateToSave));
@@ -676,6 +777,7 @@ export const MusicProvider = ({ children }) => {
     state.currentTrack,
     state.isPlaying,
     state.currentTime,
+    state.waveSensitivity,
   ]);
 
   // Helper function to find a track by ID
@@ -734,6 +836,9 @@ export const MusicProvider = ({ children }) => {
     deleteTrack: (trackId) => dispatch({ type: "DELETE_TRACK", trackId }),
     addToQueue: (track, playNext = false) =>
       dispatch({ type: "ADD_TO_QUEUE", track, playNext }),
+    removeFromQueue: (trackId) =>
+      dispatch({ type: "REMOVE_FROM_QUEUE", trackId }),
+    clearQueue: () => dispatch({ type: "CLEAR_QUEUE" }),
     createPlaylist: (name, tracks = []) => {
       const playlistId = `playlist-${Date.now()}`;
       dispatch({
@@ -758,6 +863,8 @@ export const MusicProvider = ({ children }) => {
         playlistId,
         trackIds: Array.isArray(trackIds) ? trackIds : [trackIds],
       }),
+    setWaveSensitivity: (sensitivity) =>
+      dispatch({ type: "SET_WAVE_SENSITIVITY", sensitivity }),
     getTrackById,
     getFavoriteTracks,
     getRecentlyPlayedTracks,
