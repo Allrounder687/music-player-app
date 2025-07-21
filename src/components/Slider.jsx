@@ -7,6 +7,7 @@ export const Slider = ({
   step = 1,
   onChange,
   className = "",
+  // Remove these props from what gets passed to the DOM
   thumbClassName,
   trackClassName,
   ...props
@@ -75,6 +76,10 @@ export const Slider = ({
 
   const progress = ((sliderValue - min) / (max - min)) * 100;
 
+  // Create the track and thumb styles
+  const trackStyle = trackClassName || "bg-purple-500";
+  const thumbStyle = thumbClassName || "bg-white";
+
   return (
     <div
       ref={sliderRef}
@@ -82,16 +87,17 @@ export const Slider = ({
       onMouseDown={handleMouseDown}
       {...props}
     >
+      {/* Track */}
       <div
-        className={`absolute left-0 top-0 h-full bg-purple-500 ${
-          trackClassName || ""
-        }`}
+        className={`absolute left-0 top-0 h-full ${trackStyle}`}
         style={{ width: `${progress}%` }}
       />
+
+      {/* Thumb */}
       <div
-        className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white opacity-0 hover:opacity-100 transition-opacity ${
+        className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full opacity-0 hover:opacity-100 transition-opacity ${
           isDragging ? "opacity-100" : ""
-        } ${thumbClassName || ""}`}
+        } ${thumbStyle}`}
         style={{ left: `calc(${progress}% - 6px)` }}
       />
     </div>
