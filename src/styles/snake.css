@@ -1,36 +1,18 @@
-/* Snake Seekbar Animations - Enhanced for music reactivity */
+/* Water Wave Seekbar Styles */
 
-/* No animations outside the seekbar container */
-.drop-shadow-glow {
-  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.5));
-}
-
-/* Theme-specific glow effects */
-.theme-royal-blue .drop-shadow-glow {
-  filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.5));
-}
-
-.theme-crimson-desert .drop-shadow-glow {
-  filter: drop-shadow(0 0 3px rgba(220, 38, 38, 0.5));
-}
-
-.theme-black .drop-shadow-glow {
-  filter: drop-shadow(0 0 3px rgba(156, 163, 175, 0.5));
-}
-
-/* Beat-reactive animations */
+/* Pulse animation for beats */
 @keyframes pulse {
   0% {
     transform: scale(1);
-    filter: brightness(1);
+    opacity: 0.8;
   }
   50% {
-    transform: scale(1.05);
-    filter: brightness(1.2);
+    transform: scale(1.1);
+    opacity: 1;
   }
   100% {
     transform: scale(1);
-    filter: brightness(1);
+    opacity: 0.8;
   }
 }
 
@@ -38,6 +20,60 @@
   animation: pulse 0.3s ease-in-out;
 }
 
+/* Water ripple animation */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  animation: ripple 2s ease-out infinite;
+}
+
+/* Water bubble animation */
+@keyframes bubble {
+  0% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-3px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+
+.bubble {
+  animation: bubble 1.5s ease-out infinite;
+}
+
+/* Water wave animation */
+@keyframes wave {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.wave {
+  animation: wave 10s linear infinite;
+}
+
+/* Ping animation for bubbles */
 @keyframes ping {
   0% {
     transform: scale(0.2);
@@ -57,19 +93,8 @@
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* Wave effect for visualizer */
-@keyframes wave {
-  0% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
-.wave-animation {
-  animation: wave 1.5s ease-in-out infinite;
+/* Accessibility focus styles */
+.seekbar:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
 }

@@ -184,7 +184,6 @@ export const Controls = ({
               currentTime={currentTime}
               duration={duration}
               onChange={handleSeekChange}
-              audioData={audioData}
               className="h-6"
             />
           </div>
