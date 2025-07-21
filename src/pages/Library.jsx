@@ -41,7 +41,11 @@ export const Library = () => {
     const savedDirection = localStorage.getItem("musicPlayerSortDirection");
     return savedDirection || "desc"; // asc, desc
   });
-  const [view, setView] = useState("grid"); // grid, list
+  // Load view mode from localStorage or use default
+  const [view, setView] = useState(() => {
+    const savedView = localStorage.getItem("musicPlayerViewMode");
+    return savedView || "grid"; // grid, list
+  });
   const [selectedTracks, setSelectedTracks] = useState([]);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("all");
@@ -351,7 +355,10 @@ export const Library = () => {
             } p-1`}
           >
             <button
-              onClick={() => setView("grid")}
+              onClick={() => {
+                setView("grid");
+                localStorage.setItem("musicPlayerViewMode", "grid");
+              }}
               className={`px-3 py-1 rounded-full ${
                 view === "grid"
                   ? `bg-${
@@ -363,7 +370,10 @@ export const Library = () => {
               Grid
             </button>
             <button
-              onClick={() => setView("list")}
+              onClick={() => {
+                setView("list");
+                localStorage.setItem("musicPlayerViewMode", "list");
+              }}
               className={`px-3 py-1 rounded-full ${
                 view === "list"
                   ? `bg-${

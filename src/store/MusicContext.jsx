@@ -602,13 +602,41 @@ export const MusicProvider = ({ children }) => {
       const savedState = localStorage.getItem("musicPlayerState");
       if (savedState) {
         const parsedState = JSON.parse(savedState);
+
+        // Combine sample tracks with custom tracks
+        const allTracks = [
+          ...initialState.tracks,
+          ...(parsedState.customTracks || []),
+        ];
+
+        // Find the previously playing track if it exists
+        let currentTrack = null;
+        let currentTrackIndex = -1;
+
+        if (parsedState.currentTrackId) {
+          currentTrack = allTracks.find(
+            (track) => track.id === parsedState.currentTrackId
+          );
+          if (currentTrack) {
+            currentTrackIndex = allTracks.findIndex(
+              (track) => track.id === parsedState.currentTrackId
+            );
+          }
+        }
+
         return {
           ...initialState,
           volume: parsedState.volume || initialState.volume,
           playlists: parsedState.playlists || initialState.playlists,
           repeat: parsedState.repeat || initialState.repeat,
           shuffle: parsedState.shuffle || initialState.shuffle,
-          tracks: [...initialState.tracks, ...(parsedState.customTracks || [])],
+          tracks: allTracks,
+          // Restore playback state
+          currentTrack: currentTrack,
+          currentTrackIndex: currentTrackIndex,
+          isPlaying: false, // Always start paused for better UX
+          currentTime: parsedState.currentTime || 0,
+          queue: allTracks, // Use all tracks as the default queue
         };
       }
     } catch (error) {
@@ -632,6 +660,10 @@ export const MusicProvider = ({ children }) => {
       repeat: state.repeat,
       shuffle: state.shuffle,
       customTracks: customTracks,
+      // Save current track and playback state
+      currentTrackId: state.currentTrack?.id,
+      isPlaying: state.isPlaying,
+      currentTime: state.currentTime,
     };
 
     localStorage.setItem("musicPlayerState", JSON.stringify(stateToSave));
@@ -641,6 +673,9 @@ export const MusicProvider = ({ children }) => {
     state.repeat,
     state.shuffle,
     state.tracks,
+    state.currentTrack,
+    state.isPlaying,
+    state.currentTime,
   ]);
 
   // Helper function to find a track by ID
