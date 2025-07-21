@@ -1,7 +1,8 @@
 const { ipcMain } = require("electron");
 const fs = require("fs").promises;
 const path = require("path");
-const mm = require("music-metadata");
+// Import music-metadata with CommonJS syntax for compatibility with Electron
+const mm = require("music-metadata/lib/core");
 
 /**
  * Register audio-related IPC handlers
