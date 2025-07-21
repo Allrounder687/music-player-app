@@ -1,0 +1,12 @@
+[
+  {
+    "name": "JSONPlaceholder Demo",
+    "type": "json",
+    "url": "https://jsonplaceholder.typicode.com/posts"
+  },
+  {
+    "name": "Sample Songs API",
+    "type": "json",
+    "url": "https://example.com/songs.json"
+  }
+]

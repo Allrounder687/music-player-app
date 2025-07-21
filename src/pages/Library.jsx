@@ -20,6 +20,14 @@ import { TrackContextMenu } from "../components/TrackContextMenu";
 export const Library = () => {
   const {
     tracks,
+    // === Online Music Support ===
+    onlineTracks,
+    isLoadingOnline,
+    onlineError,
+    getAllTracks,
+    refreshOnlineMusic,
+    clearOnlineTracks,
+    isOnlineTrack,
     playTrack,
     currentTrack,
     isPlaying,
@@ -59,18 +67,37 @@ export const Library = () => {
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [multiSelectMode, setMultiSelectMode] = useState(false);
+  
+  // === Online Music Support ===
+  const [sourceFilter, setSourceFilter] = useState("all"); // "all", "local", "online"
 
-  // Extract unique genres
+  // === Online Music Support ===
+  // Get all tracks (local + online) based on source filter
+  const getTracksForDisplay = () => {
+    switch (sourceFilter) {
+      case "local":
+        return tracks;
+      case "online":
+        return onlineTracks;
+      case "all":
+      default:
+        return getAllTracks();
+    }
+  };
+
+  const displayTracks = getTracksForDisplay();
+
+  // Extract unique genres from all tracks
   const genres = [
     "all",
-    ...new Set(tracks.map((track) => track.genre || "Unknown").filter(Boolean)),
+    ...new Set(displayTracks.map((track) => track.genre || "Unknown").filter(Boolean)),
   ];
 
   // Ref for tracking click outside context menu
   const contextMenuRef = useRef(null);
 
   // Filter and sort tracks
-  const filteredTracks = tracks
+  const filteredTracks = displayTracks
     .filter((track) => {
       // Filter by search term
       const matchesSearch =
@@ -293,11 +320,87 @@ export const Library = () => {
           <h1 className="text-3xl font-bold text-white">Library</h1>
           <p style={{ color: "var(--text-muted)" }}>
             {filteredTracks.length} tracks
+            {sourceFilter === "all" && (
+              <span className="ml-2 text-sm">
+                ({tracks.length} local, {onlineTracks.length} online)
+              </span>
+            )}
           </p>
         </div>
 
-        {/* Library Toolbar */}
-        <LibraryToolbar
+        {/* === Online Music Support === */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          {/* Source Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+              Source:
+            </label>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="px-3 py-1 rounded-lg text-sm focus:ring-2 focus:border-transparent"
+              style={{
+                backgroundColor: "var(--bg-secondary)",
+                borderColor: "var(--border-color)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <option value="all">All Sources</option>
+              <option value="local">Local ({tracks.length})</option>
+              <option value="online">Online ({onlineTracks.length})</option>
+            </select>
+          </div>
+
+          {/* Online Music Controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refreshOnlineMusic}
+              disabled={isLoadingOnline}
+              className="px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              style={{
+                backgroundColor: "var(--accent-color)",
+                color: "white",
+              }}
+              title="Refresh online music sources"
+            >
+              {isLoadingOnline ? "Loading..." : "Refresh Online"}
+            </button>
+            
+            {onlineTracks.length > 0 && (
+              <button
+                onClick={clearOnlineTracks}
+                className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor: "var(--bg-tertiary)",
+                  color: "var(--text-muted)",
+                  borderColor: "var(--border-color)",
+                }}
+                title="Clear online tracks"
+              >
+                Clear Online
+              </button>
+            )}
+          </div>
+
+          {/* Online Status */}
+          {isLoadingOnline && (
+            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+              <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
+              Loading online music...
+            </div>
+          )}
+          
+          {onlineError && (
+            <div className="text-sm text-red-400" title={onlineError}>
+              Error loading online music
+            </div>
+          )}
+        </div>
+      </div>
+
+             {/* Library Toolbar */}
+       <div className="mb-6">
+         <LibraryToolbar
           selectedTracks={selectedTracks}
           filteredTracks={filteredTracks}
           onPlayAll={playAllTracks}
@@ -489,6 +592,27 @@ export const Library = () => {
                     >
                       {track.artist || "Unknown Artist"}
                     </p>
+                    {/* === Online Music Support: Source Label === */}
+                    <div className="flex items-center gap-1 mt-1">
+                      <span 
+                        className="text-xs px-2 py-1 rounded-full font-medium"
+                        style={{
+                          backgroundColor: isOnlineTrack(track) ? "rgba(34, 197, 94, 0.2)" : "rgba(107, 114, 128, 0.2)",
+                          color: isOnlineTrack(track) ? "#22c55e" : "var(--text-muted)"
+                        }}
+                      >
+                        {isOnlineTrack(track) ? "Online" : "Local"}
+                      </span>
+                      {isOnlineTrack(track) && track.sourceName && (
+                        <span 
+                          className="text-xs"
+                          style={{ color: "var(--text-muted)" }}
+                          title={`Source: ${track.sourceName}`}
+                        >
+                          • {track.sourceName}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -567,7 +691,7 @@ export const Library = () => {
                 "#"
               )}
             </div>
-            <div className="col-span-4">
+            <div className="col-span-3">
               <button
                 onClick={() => handleSortChange("title")}
                 className="flex items-center hover:text-white"
@@ -576,7 +700,7 @@ export const Library = () => {
                 {sortBy === "title" && (sortDirection === "asc" ? "↑" : "↓")}
               </button>
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <button
                 onClick={() => handleSortChange("artist")}
                 className="flex items-center hover:text-white"
@@ -585,7 +709,7 @@ export const Library = () => {
                 {sortBy === "artist" && (sortDirection === "asc" ? "↑" : "↓")}
               </button>
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <button
                 onClick={() => handleSortChange("album")}
                 className="flex items-center hover:text-white"
@@ -593,6 +717,13 @@ export const Library = () => {
                 Album{" "}
                 {sortBy === "album" && (sortDirection === "asc" ? "↑" : "↓")}
               </button>
+            </div>
+            {/* === Online Music Support: Source Column === */}
+            <div className="col-span-2">
+              <span className="text-sm">Source</span>
+            </div>
+            <div className="col-span-1">
+              <span className="text-sm">From</span>
             </div>
             <div className="col-span-1 text-right">
               <button
@@ -663,7 +794,7 @@ export const Library = () => {
                   </span>
                 )}
               </div>
-              <div className="col-span-4 truncate flex items-center">
+              <div className="col-span-3 truncate flex items-center">
                 <span
                   className={
                     currentTrack?.id === track.id ? "text-purple-500" : ""
@@ -679,16 +810,35 @@ export const Library = () => {
                 </span>
               </div>
               <div
-                className="col-span-3 truncate"
+                className="col-span-2 truncate"
                 style={{ color: "var(--text-muted)" }}
               >
                 {track.artist || "Unknown Artist"}
               </div>
               <div
-                className="col-span-3 truncate"
+                className="col-span-2 truncate"
                 style={{ color: "var(--text-muted)" }}
               >
                 {track.album || "Unknown Album"}
+              </div>
+              {/* === Online Music Support: Source Columns === */}
+              <div className="col-span-2 truncate flex items-center">
+                <span 
+                  className="text-xs px-2 py-1 rounded-full font-medium"
+                  style={{
+                    backgroundColor: isOnlineTrack(track) ? "rgba(34, 197, 94, 0.2)" : "rgba(107, 114, 128, 0.2)",
+                    color: isOnlineTrack(track) ? "#22c55e" : "var(--text-muted)"
+                  }}
+                >
+                  {isOnlineTrack(track) ? "Online" : "Local"}
+                </span>
+              </div>
+              <div
+                className="col-span-1 truncate text-xs"
+                style={{ color: "var(--text-muted)" }}
+                title={isOnlineTrack(track) && track.sourceName ? track.sourceName : ""}
+              >
+                {isOnlineTrack(track) && track.sourceName ? track.sourceName : "—"}
               </div>
               <div className="col-span-1 flex items-center justify-end gap-3">
                 <span style={{ color: "var(--text-muted)" }}>

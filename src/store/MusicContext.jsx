@@ -6,6 +6,9 @@ import React, {
   useCallback,
 } from "react";
 
+// === Online Music Support ===
+import { getOnlineSongs, refreshOnlineSongs, isOnlineTrack } from "../services/onlineMusicService";
+
 const MusicContext = createContext();
 
 // Sample tracks data with local resources
@@ -59,6 +62,10 @@ const sampleTracks = [
 
 const initialState = {
   tracks: sampleTracks,
+  // === Online Music Support ===
+  onlineTracks: [], // Tracks from online sources
+  isLoadingOnline: false, // Loading state for online tracks
+  onlineError: null, // Error state for online loading
   currentTrack: null,
   isPlaying: false,
   volume: 0.8,
@@ -688,6 +695,37 @@ function musicReducer(state, action) {
         waveSensitivity: action.sensitivity,
       };
 
+    // === Online Music Support ===
+    case "LOAD_ONLINE_TRACKS_START":
+      return {
+        ...state,
+        isLoadingOnline: true,
+        onlineError: null,
+      };
+
+    case "LOAD_ONLINE_TRACKS_SUCCESS":
+      return {
+        ...state,
+        onlineTracks: action.tracks,
+        isLoadingOnline: false,
+        onlineError: null,
+      };
+
+    case "LOAD_ONLINE_TRACKS_ERROR":
+      return {
+        ...state,
+        onlineTracks: [],
+        isLoadingOnline: false,
+        onlineError: action.error,
+      };
+
+    case "CLEAR_ONLINE_TRACKS":
+      return {
+        ...state,
+        onlineTracks: [],
+        onlineError: null,
+      };
+
     default:
       return state;
   }
@@ -780,9 +818,19 @@ export const MusicProvider = ({ children }) => {
     state.waveSensitivity,
   ]);
 
-  // Helper function to find a track by ID
+  // === Online Music Support ===
+  // Helper function to get all tracks (local + online)
+  const getAllTracks = () => {
+    return [...state.tracks, ...state.onlineTracks];
+  };
+
+  // Helper function to find a track by ID (searches both local and online)
   const getTrackById = (trackId) => {
-    return state.tracks.find((track) => track.id === trackId);
+    const localTrack = state.tracks.find((track) => track.id === trackId);
+    if (localTrack) return localTrack;
+    
+    const onlineTrack = state.onlineTracks.find((track) => track.id === trackId);
+    return onlineTrack;
   };
 
   // Get all favorite tracks as objects
@@ -817,6 +865,47 @@ export const MusicProvider = ({ children }) => {
         .filter(Boolean),
     }));
   };
+
+  // === Online Music Support ===
+  // Load online tracks from all configured sources
+  const loadOnlineTracks = useCallback(async () => {
+    dispatch({ type: "LOAD_ONLINE_TRACKS_START" });
+    
+    try {
+      const onlineTracks = await getOnlineSongs();
+      dispatch({ type: "LOAD_ONLINE_TRACKS_SUCCESS", tracks: onlineTracks });
+      console.log(`=== Online Music Support: Loaded ${onlineTracks.length} online tracks ===`);
+    } catch (error) {
+      console.error("=== Online Music Support: Error loading online tracks ===", error);
+      dispatch({ type: "LOAD_ONLINE_TRACKS_ERROR", error: error.message });
+    }
+  }, []);
+
+  // Refresh online tracks
+  const refreshOnlineMusic = useCallback(async () => {
+    dispatch({ type: "LOAD_ONLINE_TRACKS_START" });
+    
+    try {
+      const onlineTracks = await refreshOnlineSongs();
+      dispatch({ type: "LOAD_ONLINE_TRACKS_SUCCESS", tracks: onlineTracks });
+      console.log(`=== Online Music Support: Refreshed ${onlineTracks.length} online tracks ===`);
+    } catch (error) {
+      console.error("=== Online Music Support: Error refreshing online tracks ===", error);
+      dispatch({ type: "LOAD_ONLINE_TRACKS_ERROR", error: error.message });
+    }
+  }, []);
+
+  // Clear online tracks
+  const clearOnlineTracks = useCallback(() => {
+    dispatch({ type: "CLEAR_ONLINE_TRACKS" });
+    console.log("=== Online Music Support: Cleared online tracks ===");
+  }, []);
+
+  // Load online tracks on component mount
+  useEffect(() => {
+    console.log("=== Online Music Support: Initializing online music service ===");
+    loadOnlineTracks();
+  }, [loadOnlineTracks]);
 
   const value = {
     ...state,
@@ -870,6 +959,12 @@ export const MusicProvider = ({ children }) => {
     getRecentlyPlayedTracks,
     getPlaylistTracks,
     getAllPlaylists,
+    // === Online Music Support ===
+    getAllTracks, // Get combined local + online tracks
+    loadOnlineTracks, // Load online tracks
+    refreshOnlineMusic, // Refresh online tracks
+    clearOnlineTracks, // Clear online tracks
+    isOnlineTrack, // Check if track is from online source
   };
 
   return (
