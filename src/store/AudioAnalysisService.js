@@ -114,22 +114,37 @@ export class AudioAnalysisService {
     return isBeat;
   }
 
+  // Cache for the last analysis data to prevent unnecessary updates
+  static lastAnalysisData = null;
+  static lastAnalysisTime = 0;
+  static analysisUpdateInterval = 100; // ms between updates
+
   /**
    * Get real-time analysis data for the current playback
    * @returns {AudioAnalysisData} - Analysis data for the current position
    */
   static getRealtimeData() {
+    // Return cached data if it's recent enough
+    const now = Date.now();
+    if (this.lastAnalysisData && now - this.lastAnalysisTime < this.analysisUpdateInterval) {
+      return this.lastAnalysisData;
+    }
+
     if (!this.isInitialized || !this.analyzer) {
-      return {
+      const emptyData = {
         bass: 0,
         mid: 0,
         treble: 0,
         volume: 0,
         beatDetected: false,
         beatConfidence: 0,
-        frequencyData: new Uint8Array(128).fill(0),
-        timeData: new Uint8Array(128).fill(0),
+        // Use smaller arrays to reduce memory usage
+        frequencyData: new Uint8Array(32).fill(0),
+        timeData: new Uint8Array(32).fill(0),
       };
+      this.lastAnalysisData = emptyData;
+      this.lastAnalysisTime = now;
+      return emptyData;
     }
 
     try {
@@ -196,28 +211,50 @@ export class AudioAnalysisService {
       const beatConfidence = this.beatDetector.beatHistory.filter(Boolean).length /
         this.beatDetector.beatHistory.length;
 
-      return {
+      // Create downsampled arrays to reduce memory usage
+      const downsampledFrequencyData = new Uint8Array(32);
+      const downsampledTimeData = new Uint8Array(32);
+
+      // Downsample the data (take every Nth sample)
+      const frequencyStep = Math.floor(this.frequencyData.length / 32);
+      const timeStep = Math.floor(this.timeData.length / 32);
+
+      for (let i = 0; i < 32; i++) {
+        downsampledFrequencyData[i] = this.frequencyData[i * frequencyStep];
+        downsampledTimeData[i] = this.timeData[i * timeStep];
+      }
+
+      // Create and cache the analysis data
+      const analysisData = {
         bass: this.bassValue,
         mid: this.midValue,
         treble: this.trebleValue,
         volume: this.overallVolume,
         beatDetected,
         beatConfidence,
-        frequencyData: [...this.frequencyData],
-        timeData: [...this.timeData],
+        frequencyData: downsampledFrequencyData,
+        timeData: downsampledTimeData,
       };
+
+      this.lastAnalysisData = analysisData;
+      this.lastAnalysisTime = now;
+
+      return analysisData;
     } catch (error) {
       console.error("Error getting audio analysis data:", error);
-      return {
+      const emptyData = {
         bass: 0,
         mid: 0,
         treble: 0,
         volume: 0,
         beatDetected: false,
         beatConfidence: 0,
-        frequencyData: new Uint8Array(128).fill(0),
-        timeData: new Uint8Array(128).fill(0),
+        frequencyData: new Uint8Array(32).fill(0),
+        timeData: new Uint8Array(32).fill(0),
       };
+      this.lastAnalysisData = emptyData;
+      this.lastAnalysisTime = now;
+      return emptyData;
     }
   }
 

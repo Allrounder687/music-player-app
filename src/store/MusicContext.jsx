@@ -832,7 +832,10 @@ export const MusicProvider = ({ children }) => {
     toggleFavorite: (trackId) => dispatch({ type: "TOGGLE_FAVORITE", trackId }),
     toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
-    setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
+    setAudioData: useCallback((data) => {
+      // Throttle audio data updates to prevent excessive renders
+      dispatch({ type: "SET_AUDIO_DATA", data });
+    }, []),
     deleteTrack: (trackId) => dispatch({ type: "DELETE_TRACK", trackId }),
     addToQueue: (track, playNext = false) =>
       dispatch({ type: "ADD_TO_QUEUE", track, playNext }),

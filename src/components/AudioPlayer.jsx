@@ -2,6 +2,15 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useMusic } from "../store/MusicContext";
 import { createAudioUrl } from "../utils/audioUtils";
 import { AudioAnalysisService } from "../store/AudioAnalysisService";
+import {
+  getStreamURL,
+  isStreamingTrack,
+} from "../utils/musicProviderService.js";
+import {
+  isYoutubeEmbedUrl,
+  extractYoutubeVideoId,
+} from "../utils/youtubeUtils";
+import YouTubePlayer from "./YouTubePlayer";
 
 /**
  * AudioPlayer component that handles the actual audio playback
@@ -52,8 +61,22 @@ export const AudioPlayer = () => {
         let sourcePath;
         let useDirectFile = false;
 
+        // Check if this is a streaming track from our music provider
+        if (isStreamingTrack(currentTrack)) {
+          try {
+            console.log(`Getting stream URL for track: ${currentTrack.id}`);
+            sourcePath = await getStreamURL(currentTrack.id);
+            console.log(`Got stream URL: ${sourcePath}`);
+          } catch (streamError) {
+            console.error("Error getting stream URL:", streamError);
+            setError(`Failed to get stream URL: ${streamError.message}`);
+            setIsLoading(false);
+            loadingRef.current = false;
+            return;
+          }
+        }
         // First check if we have a direct File object (most reliable)
-        if (currentTrack.file instanceof File) {
+        else if (currentTrack.file instanceof File) {
           console.log(`Using direct File object: ${currentTrack.file.name}`);
           sourcePath = currentTrack.file;
           useDirectFile = true;
@@ -177,7 +200,18 @@ export const AudioPlayer = () => {
     }
   }, []);
 
-  // Audio analysis with requestAnimationFrame for smoother animations
+  // Audio data update interval reference
+  const audioDataIntervalRef = useRef(null);
+
+  // Memoized setAudioData function to prevent dependency changes
+  const memoizedSetAudioData = useCallback(
+    (data) => {
+      setAudioData(data);
+    },
+    [setAudioData]
+  );
+
+  // Audio analysis with interval for stability
   useEffect(() => {
     // Always provide default audio data to prevent undefined errors
     const defaultAudioData = {
@@ -187,43 +221,43 @@ export const AudioPlayer = () => {
       volume: 0,
       beatDetected: false,
       beatConfidence: 0,
-      frequencyData: new Uint8Array(128).fill(0),
-      timeData: new Uint8Array(128).fill(0),
+      frequencyData: new Uint8Array(32).fill(0),
+      timeData: new Uint8Array(32).fill(0),
     };
 
-    setAudioData(defaultAudioData);
+    // Set default audio data once
+    memoizedSetAudioData(defaultAudioData);
 
     // Only attempt audio analysis if playing and analyzer is initialized
     if (!analyzerInitialized.current || !isPlaying) {
+      // Clear any existing interval
+      if (audioDataIntervalRef.current) {
+        clearInterval(audioDataIntervalRef.current);
+        audioDataIntervalRef.current = null;
+      }
       return;
     }
 
-    // Use requestAnimationFrame for smoother animations when playing
-    const updateAudioData = () => {
+    // Use interval instead of requestAnimationFrame to reduce update frequency
+    audioDataIntervalRef.current = setInterval(() => {
       try {
         const analysisData = AudioAnalysisService.getRealtimeData();
         if (analysisData && typeof analysisData === "object") {
-          setAudioData(analysisData);
+          memoizedSetAudioData(analysisData);
         }
       } catch (error) {
         console.error("Error updating audio data:", error);
       }
-
-      // Continue the animation loop
-      animationFrameRef.current = requestAnimationFrame(updateAudioData);
-    };
-
-    // Start the animation loop
-    animationFrameRef.current = requestAnimationFrame(updateAudioData);
+    }, 250); // Update 4 times per second instead of 10 times
 
     return () => {
-      // Clean up animation frame on unmount or when playback stops
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
+      // Clean up interval on unmount or when playback stops
+      if (audioDataIntervalRef.current) {
+        clearInterval(audioDataIntervalRef.current);
+        audioDataIntervalRef.current = null;
       }
     };
-  }, [isPlaying]); // Only depend on isPlaying
+  }, [isPlaying, memoizedSetAudioData]); // Depend on isPlaying and memoized function
 
   // Refs for tracking play operation state
   const isPlayOperationInProgressRef = useRef(false);
@@ -450,22 +484,65 @@ export const AudioPlayer = () => {
     [nextTrack, currentTrack, audioUrl]
   );
 
+  // Check if this is a YouTube embed URL
+  const isYouTubeEmbed = audioUrl && isYoutubeEmbedUrl(audioUrl);
+
+  // Update the current track with YouTube info if needed
+  useEffect(() => {
+    if (isYouTubeEmbed && currentTrack) {
+      // Extract video ID if not already present
+      const videoId = extractYoutubeVideoId(audioUrl);
+
+      // Log YouTube video information
+      console.log(`Playing YouTube video: ${videoId}`);
+
+      // Set duration for YouTube videos if not already set
+      if (currentTrack.duration === 0 && videoId) {
+        // We could fetch the actual duration from the YouTube API here
+        // but for now we'll just set a default duration
+        setDuration(300); // Default 5 minutes
+      }
+    }
+  }, [isYouTubeEmbed, currentTrack, audioUrl, setDuration]);
+
+  // Log the type of player being used
+  useEffect(() => {
+    if (audioUrl) {
+      console.log(
+        `Using ${isYouTubeEmbed ? "YouTube" : "Audio"} player for: ${audioUrl}`
+      );
+    }
+  }, [audioUrl, isYouTubeEmbed]);
+
+  // Memoize the YouTubePlayer to prevent unnecessary re-renders
+  const youtubePlayer = React.useMemo(() => {
+    if (isYouTubeEmbed && audioUrl) {
+      return <YouTubePlayer url={audioUrl} onEnded={handleEnded} />;
+    }
+    return null;
+  }, [isYouTubeEmbed, audioUrl, handleEnded]);
+
   return (
     <div style={{ display: "none" }}>
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        preload="auto"
-        crossOrigin="anonymous"
-        onTimeUpdate={handleTimeUpdate}
-        onDurationChange={handleDurationChange}
-        onEnded={handleEnded}
-        onError={handleError}
-        onLoadStart={() => console.log("Audio load started:", audioUrl)}
-        onCanPlay={() => console.log("Audio can play now:", audioUrl)}
-        onLoadedData={() => console.log("Audio data loaded:", audioUrl)}
-      />
+      {/* Use YouTube player for YouTube URLs */}
+      {youtubePlayer}
+
+      {/* Use regular audio element for other URLs */}
+      {!isYouTubeEmbed && (
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          preload="auto"
+          crossOrigin="anonymous"
+          onTimeUpdate={handleTimeUpdate}
+          onDurationChange={handleDurationChange}
+          onEnded={handleEnded}
+          onError={handleError}
+          onLoadStart={() => console.log("Audio load started:", audioUrl)}
+          onCanPlay={() => console.log("Audio can play now:", audioUrl)}
+          onLoadedData={() => console.log("Audio data loaded:", audioUrl)}
+        />
+      )}
 
       {/* We could render some UI for debugging */}
       {isLoading && <div>Loading audio...</div>}
