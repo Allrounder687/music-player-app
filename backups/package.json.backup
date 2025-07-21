@@ -12,9 +12,7 @@
     "build:app": "vite build && electron-builder",
     "postinstall": "electron-builder install-app-deps",
     "generate-icons": "node scripts/copy-icon.js",
-    "prepare": "npm run generate-icons",
-    "backup": "node -e \"require('fs').mkdirSync('backups', { recursive: true }); ['src/components/SnakeSeekbar.jsx', 'src/components/AudioPlayer.jsx', 'src/store/MusicContext.jsx', 'electron/main.js', 'vite.config.js', 'package.json', 'index.html'].forEach(file => require('fs').copyFileSync(file, 'backups/' + file.split('/').pop() + '.backup'))\"",
-    "restore-backups": "node restore-backups.js"
+    "prepare": "npm run generate-icons"
   },
   "dependencies": {
     "react": "^18.2.0",
