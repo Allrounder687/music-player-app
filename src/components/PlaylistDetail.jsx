@@ -34,8 +34,16 @@ export const PlaylistDetail = ({ playlistId, onBack }) => {
   const [tracks, setTracks] = useState([]);
   const [playlist, setPlaylist] = useState(null);
   const [filter, setFilter] = useState("");
-  const [sortBy, setSortBy] = useState("dateAdded");
-  const [sortDirection, setSortDirection] = useState("desc");
+  // Load sort preferences from localStorage or use defaults
+  const [sortBy, setSortBy] = useState(() => {
+    const savedSort = localStorage.getItem("musicPlayerSortBy");
+    return savedSort || "dateAdded";
+  });
+
+  const [sortDirection, setSortDirection] = useState(() => {
+    const savedDirection = localStorage.getItem("musicPlayerSortDirection");
+    return savedDirection || "desc";
+  });
   const [showAddTrackModal, setShowAddTrackModal] = useState(false);
   const [availableTracks, setAvailableTracks] = useState([]);
   const [selectedTracks, setSelectedTracks] = useState([]);
@@ -98,7 +106,9 @@ export const PlaylistDetail = ({ playlistId, onBack }) => {
 
   // Toggle sort direction
   const toggleSortDirection = () => {
-    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    const newDirection = sortDirection === "asc" ? "desc" : "asc";
+    setSortDirection(newDirection);
+    localStorage.setItem("musicPlayerSortDirection", newDirection);
   };
 
   // Change sort field
@@ -107,7 +117,10 @@ export const PlaylistDetail = ({ playlistId, onBack }) => {
       toggleSortDirection();
     } else {
       setSortBy(field);
-      setSortDirection("asc");
+      const newDirection = "asc";
+      setSortDirection(newDirection);
+      localStorage.setItem("musicPlayerSortBy", field);
+      localStorage.setItem("musicPlayerSortDirection", newDirection);
     }
   };
 

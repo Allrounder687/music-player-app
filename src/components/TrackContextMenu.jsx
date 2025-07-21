@@ -22,6 +22,7 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
     playlists,
     getAllPlaylists,
     addToPlaylist,
+    addToQueue,
   } = useMusic();
   const { theme } = useTheme();
 
@@ -153,6 +154,34 @@ export const TrackContextMenu = ({ track, position, onClose }) => {
               <FaRegHeart className="mr-3" /> Add to Favorites
             </>
           )}
+        </button>
+
+        <button
+          onClick={() => {
+            addToQueue(track);
+            onClose();
+          }}
+          className={`flex items-center w-full px-4 py-2 text-${
+            theme?.colors?.text?.main || "white"
+          } hover:bg-${
+            theme?.colors?.background?.hover || "gray-700"
+          } text-left`}
+        >
+          <FaList className="mr-3" /> Add to Queue
+        </button>
+
+        <button
+          onClick={() => {
+            addToQueue(track, true);
+            onClose();
+          }}
+          className={`flex items-center w-full px-4 py-2 text-${
+            theme?.colors?.text?.main || "white"
+          } hover:bg-${
+            theme?.colors?.background?.hover || "gray-700"
+          } text-left`}
+        >
+          <FaPlay className="mr-3" /> Play Next
         </button>
 
         <div className="relative">

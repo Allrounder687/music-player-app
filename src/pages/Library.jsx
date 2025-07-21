@@ -31,8 +31,16 @@ export const Library = () => {
   } = useMusic();
   const { theme } = useTheme();
   const [filter, setFilter] = useState("");
-  const [sortBy, setSortBy] = useState("dateAdded"); // dateAdded, title, artist, album
-  const [sortDirection, setSortDirection] = useState("desc"); // asc, desc
+  // Load sort preferences from localStorage or use defaults
+  const [sortBy, setSortBy] = useState(() => {
+    const savedSort = localStorage.getItem("musicPlayerSortBy");
+    return savedSort || "dateAdded"; // dateAdded, title, artist, album
+  });
+
+  const [sortDirection, setSortDirection] = useState(() => {
+    const savedDirection = localStorage.getItem("musicPlayerSortDirection");
+    return savedDirection || "desc"; // asc, desc
+  });
   const [view, setView] = useState("grid"); // grid, list
   const [selectedTracks, setSelectedTracks] = useState([]);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -125,7 +133,9 @@ export const Library = () => {
 
   // Toggle sort direction
   const toggleSortDirection = () => {
-    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    const newDirection = sortDirection === "asc" ? "desc" : "asc";
+    setSortDirection(newDirection);
+    localStorage.setItem("musicPlayerSortDirection", newDirection);
   };
 
   // Change sort field
@@ -134,7 +144,10 @@ export const Library = () => {
       toggleSortDirection();
     } else {
       setSortBy(field);
-      setSortDirection("asc");
+      const newDirection = "asc";
+      setSortDirection(newDirection);
+      localStorage.setItem("musicPlayerSortBy", field);
+      localStorage.setItem("musicPlayerSortDirection", newDirection);
     }
   };
 

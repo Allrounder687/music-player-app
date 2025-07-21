@@ -88,6 +88,42 @@ const initialState = {
 
 function musicReducer(state, action) {
   switch (action.type) {
+    case "ADD_TO_QUEUE": {
+      const { track, playNext = false } = action;
+
+      // Check if track is already in queue (we'll use this in future enhancements)
+      // const isInQueue = state.queue.some((t) => t.id === track.id);
+
+      let newQueue = [...state.queue];
+      let newCurrentTrackIndex = state.currentTrackIndex;
+
+      if (playNext) {
+        // Add track right after the current track
+        if (state.currentTrackIndex >= 0) {
+          // If there's a current track playing, insert after it
+          newQueue.splice(state.currentTrackIndex + 1, 0, track);
+          // Current track index stays the same
+        } else {
+          // If no track is playing, add to the beginning
+          newQueue.unshift(track);
+          newCurrentTrackIndex = 0;
+        }
+      } else {
+        // Add track to the end of the queue
+        newQueue.push(track);
+
+        // If this is the first track, set current track index
+        if (newQueue.length === 1) {
+          newCurrentTrackIndex = 0;
+        }
+      }
+
+      return {
+        ...state,
+        queue: newQueue,
+        currentTrackIndex: newCurrentTrackIndex,
+      };
+    }
     case "DELETE_TRACK": {
       const trackId = action.trackId;
 
@@ -661,6 +697,8 @@ export const MusicProvider = ({ children }) => {
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
     setAudioData: (data) => dispatch({ type: "SET_AUDIO_DATA", data }),
     deleteTrack: (trackId) => dispatch({ type: "DELETE_TRACK", trackId }),
+    addToQueue: (track, playNext = false) =>
+      dispatch({ type: "ADD_TO_QUEUE", track, playNext }),
     createPlaylist: (name, tracks = []) => {
       const playlistId = `playlist-${Date.now()}`;
       dispatch({
