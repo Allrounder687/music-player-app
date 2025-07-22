@@ -4,6 +4,7 @@ const fs = require("fs").promises;
 const isDev = !app.isPackaged;
 const { registerAudioHandlers } = require("./audioHandler");
 const { registerYtDlpHandlers } = require("./ytDlpHandler");
+const { registerSaavnHandlers } = require("./saavnHandler");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require("electron-squirrel-startup")) {
@@ -50,7 +51,9 @@ function createWindow() {
   // Load the app
   if (isDev) {
     // Get port from environment variable or use default
-    const port = process.env.VITE_DEV_SERVER_PORT || 3001;
+    // Vite might use a different port if 3001 is in use
+    const port = 3002; // Use port 3002 directly since that's what Vite is using
+    console.log(`Loading app from http://localhost:${port}`);
     mainWindow.loadURL(`http://localhost:${port}`);
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
@@ -149,10 +152,81 @@ app.whenReady().then(() => {
     registerYtDlpHandlers();
     console.log("yt-dlp handlers registered successfully");
 
+    // Manually register the handlers if they're not being registered properly
+    if (!ipcMain.eventNames().includes('ytdlp:getStreamUrl')) {
+      console.log("Manually registering yt-dlp handlers...");
+      const { getStreamUrl, getVideoInfo, getFormats, downloadVideo, extractAudio, ensureYtDlp } = require('./ytDlpHandler');
+
+      ipcMain.handle('ytdlp:ensure', async () => {
+        try {
+          const path = await ensureYtDlp();
+          return { success: true, path };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      ipcMain.handle('ytdlp:getVideoInfo', async (event, url) => {
+        try {
+          const info = await getVideoInfo(url);
+          return { success: true, info };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      ipcMain.handle('ytdlp:getFormats', async (event, url) => {
+        try {
+          const formats = await getFormats(url);
+          return { success: true, formats };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      ipcMain.handle('ytdlp:downloadVideo', async (event, url, outputDir, format) => {
+        try {
+          const filePath = await downloadVideo(url, outputDir, format);
+          return { success: true, filePath };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      ipcMain.handle('ytdlp:extractAudio', async (event, url, outputDir, format, quality) => {
+        try {
+          const filePath = await extractAudio(url, outputDir, format, quality);
+          return { success: true, filePath };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      ipcMain.handle('ytdlp:getStreamUrl', async (event, url, format) => {
+        try {
+          const streamUrl = await getStreamUrl(url, format);
+          return { success: true, streamUrl };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      });
+
+      console.log("Manual registration complete");
+    }
+  } catch (error) {
+    console.error("Error registering yt-dlp handlers:", error);
+  }
+
+  // Register JioSaavn handlers
+  console.log("Registering JioSaavn handlers...");
+  try {
+    registerSaavnHandlers();
+    console.log("JioSaavn handlers registered successfully");
+
     // List all registered IPC handlers for debugging
     console.log("Registered IPC handlers:", ipcMain.eventNames());
   } catch (error) {
-    console.error("Error registering yt-dlp handlers:", error);
+    console.error("Error registering JioSaavn handlers:", error);
   }
 
   // Register global shortcuts
