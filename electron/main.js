@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs").promises;
 const isDev = !app.isPackaged;
 const { registerAudioHandlers } = require("./audioHandler");
+const { registerYtDlpHandlers } = require("./ytDlpHandler");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require("electron-squirrel-startup")) {
@@ -139,6 +140,9 @@ app.whenReady().then(() => {
 
   // Register audio handlers
   registerAudioHandlers();
+
+  // Register yt-dlp handlers
+  registerYtDlpHandlers();
 
   // Register global shortcuts
   if (isDev) {

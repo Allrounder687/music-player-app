@@ -13,6 +13,12 @@ const validChannels = {
     "fs:openDialog",
     "audio:readFile",
     "audio:getMetadata",
+    "ytdlp:ensure",
+    "ytdlp:getVideoInfo",
+    "ytdlp:getFormats",
+    "ytdlp:downloadVideo",
+    "ytdlp:extractAudio",
+    "ytdlp:getStreamUrl",
   ],
   // Main to Renderer
   fromMain: ["app:version-reply", "window:maximized", "window:unmaximized"],
@@ -77,6 +83,28 @@ contextBridge.exposeInMainWorld("electron", {
     },
     getMetadata: async (filePath) => {
       return await ipcRenderer.invoke("audio:getMetadata", filePath);
+    },
+  },
+
+  // yt-dlp methods
+  ytdlp: {
+    ensure: async () => {
+      return await ipcRenderer.invoke("ytdlp:ensure");
+    },
+    getVideoInfo: async (url) => {
+      return await ipcRenderer.invoke("ytdlp:getVideoInfo", url);
+    },
+    getFormats: async (url) => {
+      return await ipcRenderer.invoke("ytdlp:getFormats", url);
+    },
+    downloadVideo: async (url, outputDir, format) => {
+      return await ipcRenderer.invoke("ytdlp:downloadVideo", url, outputDir, format);
+    },
+    extractAudio: async (url, outputDir, format, quality) => {
+      return await ipcRenderer.invoke("ytdlp:extractAudio", url, outputDir, format, quality);
+    },
+    getStreamUrl: async (url, format) => {
+      return await ipcRenderer.invoke("ytdlp:getStreamUrl", url, format);
     },
   },
 });
