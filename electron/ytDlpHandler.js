@@ -39,7 +39,18 @@ async function ensureYtDlp() {
             return 'yt-dlp';
         }
     } catch (error) {
-        console.log('yt-dlp not found in PATH, checking app directory...');
+        console.log('yt-dlp not found in PATH, checking user bin directory...');
+    }
+
+    // Check if yt-dlp is in user's bin directory (where we manually installed it)
+    const userBinPath = path.join(os.homedir(), 'bin', ytDlpBinaryName);
+    try {
+        if (fs.existsSync(userBinPath)) {
+            console.log('Found yt-dlp in user bin directory:', userBinPath);
+            return userBinPath;
+        }
+    } catch (error) {
+        console.error('Error checking for yt-dlp in user bin directory:', error);
     }
 
     // Check if yt-dlp is already downloaded in app directory
