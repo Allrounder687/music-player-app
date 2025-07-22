@@ -139,10 +139,21 @@ app.whenReady().then(() => {
   createWindow();
 
   // Register audio handlers
+  console.log("Registering audio handlers...");
   registerAudioHandlers();
+  console.log("Audio handlers registered successfully");
 
   // Register yt-dlp handlers
-  registerYtDlpHandlers();
+  console.log("Registering yt-dlp handlers...");
+  try {
+    registerYtDlpHandlers();
+    console.log("yt-dlp handlers registered successfully");
+
+    // List all registered IPC handlers for debugging
+    console.log("Registered IPC handlers:", ipcMain.eventNames());
+  } catch (error) {
+    console.error("Error registering yt-dlp handlers:", error);
+  }
 
   // Register global shortcuts
   if (isDev) {

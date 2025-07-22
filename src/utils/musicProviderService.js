@@ -168,8 +168,14 @@ export async function getStreamURL(songId) {
     const [provider, id] = songId.split(':');
 
     if (provider === 'youtube') {
-      // Check if the track has the useYtDlp flag
+      // Check if yt-dlp is available
       const useYtDlp = window.electron?.ytdlp !== undefined;
+
+      if (useYtDlp) {
+        console.log('yt-dlp is available, will attempt to use it for streaming');
+      } else {
+        console.log('yt-dlp is not available, will use YouTube embed');
+      }
 
       // Use the YouTube service to get the stream URL
       return await getYouTubeStreamURL(id, useYtDlp);

@@ -101,12 +101,15 @@ export async function getYouTubeStreamURL(videoId, useYtDlp = false) {
     // If yt-dlp is enabled and available, use it to get a direct stream URL
     if (useYtDlp && window.electron?.ytdlp) {
         try {
-            const { getStreamUrl } = await import('./ytDlpService');
-            const result = await getStreamUrl(`https://www.youtube.com/watch?v=${videoId}`, 'bestaudio');
+            console.log('Attempting to use yt-dlp for direct streaming...');
+            // Call the IPC method directly instead of importing the service
+            const result = await window.electron.ytdlp.getStreamUrl(`https://www.youtube.com/watch?v=${videoId}`, 'bestaudio');
 
             if (result.success && result.streamUrl) {
                 console.log('Using yt-dlp direct stream URL');
                 return result.streamUrl;
+            } else {
+                console.warn('yt-dlp did not return a valid stream URL:', result);
             }
         } catch (error) {
             console.error('Error getting yt-dlp stream URL:', error);
