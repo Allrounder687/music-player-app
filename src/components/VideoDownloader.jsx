@@ -427,8 +427,11 @@ const VideoDownloader = () => {
                 disabled={isDownloading}
               >
                 <option value="best">Best Quality</option>
-                {formats.map((format) => (
-                  <option key={format.formatCode} value={format.formatCode}>
+                {formats.map((format, index) => (
+                  <option
+                    key={`${format.formatCode}-${index}`}
+                    value={format.formatCode}
+                  >
                     {format.formatCode}: {format.description} (
                     {format.extension})
                   </option>
