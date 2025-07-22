@@ -588,8 +588,16 @@ function musicReducer(state, action) {
     case "TOGGLE_FAVORITE":
       const trackId = action.trackId;
       const isFavorite = state.playlists.favorites.includes(trackId);
+
+      // Check if the track exists in the tracks list, if not, add it
+      let updatedTracks = [...state.tracks];
+      if (!state.tracks.some((track) => track.id === trackId) && action.track) {
+        updatedTracks.push(action.track);
+      }
+
       return {
         ...state,
+        tracks: updatedTracks,
         playlists: {
           ...state.playlists,
           favorites: isFavorite
@@ -829,7 +837,8 @@ export const MusicProvider = ({ children }) => {
     prevTrack: () => dispatch({ type: "PREV_TRACK" }),
     setQueue: (tracks, autoplay = true) =>
       dispatch({ type: "SET_QUEUE", tracks, autoplay }),
-    toggleFavorite: (trackId) => dispatch({ type: "TOGGLE_FAVORITE", trackId }),
+    toggleFavorite: (trackId, track) =>
+      dispatch({ type: "TOGGLE_FAVORITE", trackId, track }),
     toggleRepeat: () => dispatch({ type: "TOGGLE_REPEAT" }),
     toggleShuffle: () => dispatch({ type: "TOGGLE_SHUFFLE" }),
     setAudioData: useCallback((data) => {

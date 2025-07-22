@@ -13,7 +13,13 @@ import {
   FaRandom,
   FaCheck,
   FaTrash,
+  FaSearch,
+  FaSpinner,
 } from "react-icons/fa";
+import {
+  searchSongs,
+  initializeMusicProvider,
+} from "../utils/musicProviderService.js";
 import { formatTime } from "../utils/audioUtils";
 import { TrackContextMenu } from "../components/TrackContextMenu";
 
@@ -32,6 +38,9 @@ export const Library = () => {
   } = useMusic();
   const { theme } = useTheme();
   const [filter, setFilter] = useState("");
+  const [streamingResults, setStreamingResults] = useState([]);
+  const [isSearchingStreaming, setIsSearchingStreaming] = useState(false);
+  const [streamingInitialized, setStreamingInitialized] = useState(false);
   // Load sort preferences from localStorage or use defaults
   const [sortBy, setSortBy] = useState(() => {
     const savedSort = localStorage.getItem("musicPlayerSortBy");
@@ -68,6 +77,44 @@ export const Library = () => {
 
   // Ref for tracking click outside context menu
   const contextMenuRef = useRef(null);
+
+  // Initialize streaming provider
+  useEffect(() => {
+    async function initStreaming() {
+      try {
+        const success = await initializeMusicProvider();
+        setStreamingInitialized(success);
+      } catch (err) {
+        console.error("Failed to initialize streaming provider:", err);
+      }
+    }
+
+    initStreaming();
+  }, []);
+
+  // Search streaming services when filter changes
+  useEffect(() => {
+    const searchStreamingServices = async () => {
+      if (!filter || filter.length < 3) {
+        setStreamingResults([]);
+        return;
+      }
+
+      setIsSearchingStreaming(true);
+      try {
+        const results = await searchSongs(filter);
+        setStreamingResults(results);
+      } catch (err) {
+        console.error("Streaming search error:", err);
+      } finally {
+        setIsSearchingStreaming(false);
+      }
+    };
+
+    // Use debounce to avoid too many requests
+    const debounceTimer = setTimeout(searchStreamingServices, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [filter]);
 
   // Filter and sort tracks
   const filteredTracks = tracks
@@ -386,7 +433,113 @@ export const Library = () => {
         />
       )}
 
-      {filteredTracks.length === 0 ? (
+      {/* Streaming search results */}
+      {streamingResults.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-4 text-white">
+            Streaming Results
+          </h2>
+          <div
+            className="grid grid-cols-1 gap-2 mb-6"
+            style={{ backgroundColor: "var(--bg-secondary)" }}
+          >
+            {streamingResults.map((song) => (
+              <div
+                key={song.id}
+                className="p-3 flex items-center hover:bg-opacity-10 hover:bg-white"
+                style={{ borderBottom: "1px solid var(--border-color)" }}
+              >
+                <div className="flex-shrink-0 mr-3">
+                  <img
+                    src={song.imageUrl || song.coverArt}
+                    alt={song.title}
+                    className="w-12 h-12 object-cover rounded"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/images/album-placeholder.svg";
+                    }}
+                  />
+                </div>
+                <div className="flex-grow">
+                  <div className="font-medium text-white">{song.title}</div>
+                  <div
+                    className="text-sm"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {song.artist} • {song.album || "Unknown Album"}
+                  </div>
+                  <div
+                    className="text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Provider: {song.provider}
+                  </div>
+                </div>
+                <div className="flex-shrink-0 flex space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(song.id, song);
+                    }}
+                    className="p-2 rounded-full"
+                    style={{
+                      color: playlists.favorites.includes(song.id)
+                        ? "#ff6b6b"
+                        : "var(--text-muted)",
+                    }}
+                    title={
+                      playlists.favorites.includes(song.id)
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                    }
+                  >
+                    {playlists.favorites.includes(song.id) ? (
+                      <FaHeart />
+                    ) : (
+                      <FaRegHeart />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToQueue(song);
+                    }}
+                    className="p-2 rounded-full"
+                    style={{ color: "var(--text-muted)" }}
+                    title="Add to queue"
+                  >
+                    <FaPlus />
+                  </button>
+                  <button
+                    onClick={() => playTrack(song)}
+                    className="p-2 rounded-full"
+                    style={{ color: "var(--text-muted)" }}
+                    title="Play now"
+                  >
+                    <FaPlay />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading indicator for streaming search */}
+      {isSearchingStreaming && (
+        <div
+          className="flex items-center justify-center py-4 mb-6"
+          style={{ backgroundColor: "var(--bg-secondary)" }}
+        >
+          <FaSpinner className="animate-spin mr-2 text-white" />
+          <span className="text-white">Searching streaming services...</span>
+        </div>
+      )}
+
+      {/* Local library results */}
+      <h2 className="text-xl font-bold mb-4 text-white">Your Library</h2>
+
+      {filteredTracks.length === 0 && streamingResults.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <FaMusic
             className="text-5xl mb-4"
@@ -402,6 +555,12 @@ export const Library = () => {
             {filter
               ? `Try adjusting your search query.`
               : `Import music to start building your library.`}
+          </p>
+        </div>
+      ) : filteredTracks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-center text-white">
+            No local tracks match your search.
           </p>
         </div>
       ) : view === "grid" ? (
