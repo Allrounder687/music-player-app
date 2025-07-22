@@ -447,6 +447,7 @@ export const AudioPlayer = () => {
       if (
         currentTrack &&
         currentTrack.file instanceof File &&
+        audioUrl &&
         audioUrl.startsWith("blob:")
       ) {
         console.log(
