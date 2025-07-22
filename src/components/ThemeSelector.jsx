@@ -37,19 +37,18 @@ export const ThemeSelector = ({ compact = false }) => {
             }`}
             title={theme.name}
             style={{
-              backgroundColor: `var(--${
+              backgroundColor:
                 theme.id === "default"
-                  ? "accent-color"
+                  ? "var(--accent-color)"
                   : theme.id === "royalBlue"
-                  ? "blue-600"
+                  ? "#2563EB" // blue-600
                   : theme.id === "crimsonDesert"
-                  ? "red-600"
+                  ? "#DC2626" // red-600
                   : theme.id === "black"
-                  ? "gray-800"
+                  ? "#000000" // black
                   : theme.id === "midnightBlack"
-                  ? "indigo-500"
-                  : "emerald-500"
-              })`,
+                  ? "#6366F1" // indigo-500
+                  : "#10B981", // emerald-500
             }}
           />
         ))}
@@ -75,19 +74,18 @@ export const ThemeSelector = ({ compact = false }) => {
           }`}
           title={theme.name}
           style={{
-            backgroundColor: `var(--${
+            backgroundColor:
               theme.id === "default"
-                ? "accent-color"
+                ? "var(--accent-color)"
                 : theme.id === "royalBlue"
-                ? "blue-600"
+                ? "#2563EB" // blue-600
                 : theme.id === "crimsonDesert"
-                ? "red-600"
+                ? "#DC2626" // red-600
                 : theme.id === "black"
-                ? "gray-800"
+                ? "#000000" // black
                 : theme.id === "midnightBlack"
-                ? "indigo-500"
-                : "emerald-500"
-            })`,
+                ? "#6366F1" // indigo-500
+                : "#10B981", // emerald-500
           }}
         />
       ))}
