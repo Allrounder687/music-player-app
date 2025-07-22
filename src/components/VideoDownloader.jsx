@@ -17,6 +17,7 @@ import {
   FaExclamationTriangle,
   FaSpinner,
   FaPlus,
+  FaPlay,
 } from "react-icons/fa";
 
 /**
