@@ -14,6 +14,8 @@ export class AudioAnalysisService {
   static trebleValue = 0;
   static overallVolume = 0;
   static smoothingFactor = 0.8; // For smoother transitions
+  static equalizerNode = null; // For equalizer integration
+  static sourceNodes = new WeakMap();
   static beatDetector = {
     threshold: 0.15,
     previousBassValue: 0,
@@ -35,29 +37,57 @@ export class AudioAnalysisService {
           window.webkitAudioContext)();
       }
 
-      // Create analyzer if it doesn't exist
-      if (!this.analyzer) {
-        this.analyzer = this.audioContext.createAnalyser();
-        this.analyzer.fftSize = 512; // Increased for better frequency resolution
-        this.analyzer.smoothingTimeConstant = 0.7; // Slightly reduced for more responsive beats
-
-        const bufferLength = this.analyzer.frequencyBinCount;
-        this.frequencyData = new Uint8Array(bufferLength);
-        this.timeData = new Uint8Array(bufferLength);
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
       }
 
-      // Connect the audio element to the analyzer
-      if (this.source) {
-        this.source.disconnect();
+      // Check if we already have a source node for this element
+      if (this.sourceNodes.has(audioElement)) {
+        this.source = this.sourceNodes.get(audioElement);
+      } else {
+        // Create new source node
+        this.source = this.audioContext.createMediaElementSource(audioElement);
+        this.sourceNodes.set(audioElement, this.source);
       }
 
-      this.source = this.audioContext.createMediaElementSource(audioElement);
+      // Always create a new analyzer for each initialization call,
+      // or ensure the existing one is properly disconnected/reconnected.
+      // If an analyzer already exists, disconnect it first to prevent multiple connections.
+      if (this.analyzer) {
+        try {
+          // Attempt to disconnect if possible, though connect/disconnect logic can be tricky
+          this.analyzer.disconnect();
+        } catch (e) {
+          // Ignore disconnection errors
+        }
+      }
+
+      this.analyzer = this.audioContext.createAnalyser();
+      this.analyzer.fftSize = 256;
+      this.analyzer.smoothingTimeConstant = 0.7;
+
+      const bufferLength = this.analyzer.frequencyBinCount;
+      this.frequencyData = new Uint8Array(bufferLength);
+      this.timeData = new Uint8Array(bufferLength);
+
+      // Connect source -> analyzer -> destination
+      // Note: We don't disconnect current source connections because a source can have multiple outputs.
+      // However, if we are re-initializing, we might want to avoid duplicate paths?
+      // For now, let's assume one path per analyzer.
       this.source.connect(this.analyzer);
       this.analyzer.connect(this.audioContext.destination);
 
+      this.dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
       this.isInitialized = true;
       console.log("Audio analyzer initialized successfully");
     } catch (error) {
+      // Ignore "already connected" errors as they are harmless in this context
+      if (error instanceof DOMException && error.name === 'InvalidStateError' && error.message.includes('already connected')) {
+        console.log("Audio analyzer source already connected, reusing existing connection");
+        this.isInitialized = true; // Consider it initialized if source is already connected
+        return;
+      }
       console.error("Failed to initialize audio analyzer:", error);
       this.isInitialized = false;
     }
@@ -265,7 +295,48 @@ export class AudioAnalysisService {
       volume: 0,
     };
   }
+
+  /**
+   * Get the audio context for external use (like equalizer)
+   * @returns {AudioContext|null} - The audio context
+   */
+  static getAudioContext() {
+    return this.audioContext;
+  }
+
+  /**
+   * Get the audio source node for external use (like equalizer)
+   * @returns {AudioNode|null} - The audio source node
+   */
+  static getAudioSource() {
+    return this.source;
+  }
+
+  /**
+   * Set the equalizer node to be inserted in the audio chain
+   * @param {AudioNode} equalizerNode - The equalizer output node
+   */
+  static setEqualizerNode(equalizerNode) {
+    this.equalizerNode = equalizerNode;
+
+    // Reconnect the audio chain with equalizer
+    if (this.source && this.analyzer && equalizerNode) {
+      try {
+        // Disconnect existing connections
+        this.source.disconnect();
+
+        // Connect: source -> equalizer -> analyzer -> destination
+        this.source.connect(equalizerNode);
+        equalizerNode.connect(this.analyzer);
+        equalizerNode.connect(this.audioContext.destination);
+      } catch (error) {
+        console.error('Error connecting equalizer to audio chain:', error);
+      }
+    }
+  }
 }
+
+
 
 /**
  * @typedef {Object} AudioAnalysisData

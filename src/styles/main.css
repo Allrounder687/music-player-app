@@ -4,6 +4,7 @@
 @import "tailwindcss/utilities";
 @import "./snake.css";
 @import "./search-inputs.css";
+@import "./modern.css";
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -12,16 +13,19 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937; /* bg-gray-800 */
+  background: #1f2937;
+  /* bg-gray-800 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563; /* bg-gray-600 */
+  background: #4b5563;
+  /* bg-gray-600 */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280; /* bg-gray-500 */
+  background: #6b7280;
+  /* bg-gray-500 */
 }
 
 /* Custom styles */
@@ -82,6 +86,81 @@
   --border-color: #1f2937;
 }
 
+/* Light theme */
+.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --accent-color: #2563eb;
+  --accent-color-light: #3b82f6;
+  --accent-color-dark: #1d4ed8;
+  --border-color: #d1d5db;
+}
+
+/* Emerald Night theme */
+.theme-emeraldNight {
+  --bg-primary: #030712;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #10b981;
+  --text-muted: #34d399;
+  --accent-color: #10b981;
+  --accent-color-light: #34d399;
+  --accent-color-dark: #059669;
+  --border-color: #065f46;
+}
+
+/* Midnight Black theme */
+.theme-midnightBlack {
+  --bg-primary: #000000;
+  --bg-secondary: #030712;
+  --bg-tertiary: #111827;
+  --text-primary: #e0e7ff;
+  --text-secondary: #c7d2fe;
+  --text-muted: #a5b4fc;
+  --accent-color: #6366f1;
+  --accent-color-light: #818cf8;
+  --accent-color-dark: #4f46e5;
+  --border-color: #312e81;
+}
+
+/* Glassmorphism theme */
+.theme-glassmorphism {
+  --bg-primary: transparent;
+  --bg-secondary: rgba(255, 255, 255, 0.1);
+  --bg-tertiary: rgba(255, 255, 255, 0.2);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.9);
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --accent-color: #3b82f6;
+  --accent-color-light: #60a5fa;
+  --accent-color-dark: #2563eb;
+  --border-color: rgba(255, 255, 255, 0.2);
+
+  /* Glassmorphism background */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
+}
+
+.theme-glassmorphism::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
 html,
 body,
 #root {
@@ -89,7 +168,6 @@ body,
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
 }
 
 body {
@@ -101,8 +179,11 @@ body {
   color: var(--text-primary);
   background-color: var(--bg-primary);
 
-  /* Tailwind classes */
-  @apply font-sans antialiased text-white;
+  /* Tailwind classes applied via standard CSS */
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: white;
 }
 
 /* Custom transitions */
@@ -140,10 +221,12 @@ body {
 
 /* Animation for playing state */
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -161,16 +244,19 @@ body {
 .non-draggable {
   -webkit-app-region: no-drag;
 }
+
 /* Snake Seekbar styles */
 .drop-shadow-glow {
   filter: drop-shadow(0 0 4px var(--accent-color));
 }
 
 @keyframes snake-pulse {
+
   0%,
   100% {
     filter: drop-shadow(0 0 4px var(--accent-color));
   }
+
   50% {
     filter: drop-shadow(0 0 8px var(--accent-color));
     transform: scale(1.1);
@@ -192,4 +278,141 @@ body {
 
 .theme-black .drop-shadow-glow {
   filter: drop-shadow(0 0 4px rgba(156, 163, 175, 0.7));
+}
+
+/* Electron draggable regions */
+.draggable {
+  -webkit-app-region: drag;
+  /* Don't disable pointer events - let child elements handle it */
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+
+/* Ensure all interactive elements are non-draggable */
+button,
+input,
+select,
+textarea,
+a,
+[role="button"],
+[role="menuitem"],
+.clickable {
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+}
+
+/* Specific fixes for common interactive elements */
+.dropdown-menu,
+.tooltip,
+.modal,
+.popover {
+  -webkit-app-region: no-drag !important;
+}
+
+/* Fix for nested draggable/non-draggable elements */
+.draggable .non-draggable {
+  -webkit-app-region: no-drag !important;
+}
+
+.draggable button,
+.draggable input,
+.draggable select,
+.draggable textarea,
+.draggable a {
+  -webkit-app-region: no-drag !important;
+}
+
+/* High z-index for dropdowns and modals */
+.dropdown-menu {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+/* Performance optimizations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hardware acceleration for smooth animations */
+.smooth-transform {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimize scrolling */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Reduce repaints */
+.gpu-accelerated {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimize hover states */
+.hover-optimize {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.hover-optimize:hover {
+  transform: translateY(-1px);
+}
+
+/* Volume slider styling */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Mini player enhancements */
+.mini-player-controls {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Button hover effects */
+.control-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.control-button:hover {
+  transform: translateY(-1px);
+}
+
+.control-button:active {
+  transform: translateY(0);
 }

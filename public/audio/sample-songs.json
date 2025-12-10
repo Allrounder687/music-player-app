@@ -1,0 +1,83 @@
+{
+  "songs": [
+    {
+      "title": "Clocks",
+      "artist": "Coldplay",
+      "album": "A Rush of Blood to the Head",
+      "duration": 317,
+      "year": 2002,
+      "genre": "Alternative Rock",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3",
+      "canEnrich": true
+    },
+    {
+      "title": "Bohemian Rhapsody",
+      "artist": "Queen",
+      "album": "A Night at the Opera",
+      "duration": 355,
+      "year": 1975,
+      "genre": "Rock",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample2.mp3",
+      "canEnrich": true
+    },
+    {
+      "title": "Hotel California",
+      "artist": "Eagles",
+      "album": "Hotel California",
+      "duration": 391,
+      "year": 1976,
+      "genre": "Rock",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample3.mp3",
+      "canEnrich": true
+    },
+    {
+      "title": "Billie Jean",
+      "artist": "Michael Jackson",
+      "album": "Thriller",
+      "duration": 294,
+      "year": 1982,
+      "genre": "Pop",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3",
+      "canEnrich": true
+    },
+    {
+      "title": "Imagine",
+      "artist": "John Lennon",
+      "album": "Imagine",
+      "duration": 183,
+      "year": 1971,
+      "genre": "Rock",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample2.mp3",
+      "canEnrich": true
+    },
+    {
+      "title": "Tum Hi Ho",
+      "artist": "Arijit Singh",
+      "album": "Aashiqui 2",
+      "duration": 262,
+      "year": 2013,
+      "genre": "Bollywood",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample3.mp3",
+      "canEnrich": true,
+      "language": "hindi"
+    },
+    {
+      "title": "Kal Ho Naa Ho",
+      "artist": "Sonu Nigam",
+      "album": "Kal Ho Naa Ho",
+      "duration": 326,
+      "year": 2003,
+      "genre": "Bollywood",
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3",
+      "canEnrich": true,
+      "language": "hindi"
+    }
+  ]
+}

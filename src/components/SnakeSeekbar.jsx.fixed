@@ -100,33 +100,38 @@ export const SnakeSeekbar = ({
     });
   }, []);
 
-  // Update wave points based on current time
-  // FIX: Removed getWaveYPosition and updateWavePoints from dependencies to break the infinite loop
+  // Update wave points based on current time - optimized to prevent infinite loops
   useEffect(() => {
     if (!isDragging && duration > 0) {
-      // Ensure we don't divide by zero and handle edge cases
-      const percentage = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
-      updateWavePoints(percentage);
+      // Throttle updates to improve performance
+      const percentage = Math.min(currentTime / duration, 1);
+      
+      // Use requestAnimationFrame for smooth updates
+      const updateFrame = () => {
+        updateWavePoints(percentage);
 
-      // Update head position
-      const headX = percentage * 100;
-      const headY = getWaveYPosition(headX, 0);
+        // Update head position
+        const headX = percentage * 100;
+        const headY = getWaveYPosition(headX, 0);
 
-      // Calculate angle based on nearby points for head orientation
-      let angle = 0;
-      if (percentage > 0.01 && percentage < 0.99) {
-        const prevX = (percentage - 0.01) * 100;
-        const prevY = getWaveYPosition(prevX, 0);
-        const nextX = (percentage + 0.01) * 100;
-        const nextY = getWaveYPosition(nextX, 0);
+        // Calculate angle for head orientation
+        let angle = 0;
+        if (percentage > 0.01 && percentage < 0.99) {
+          const prevX = (percentage - 0.01) * 100;
+          const prevY = getWaveYPosition(prevX, 0);
+          const nextX = (percentage + 0.01) * 100;
+          const nextY = getWaveYPosition(nextX, 0);
 
-        // Calculate angle in radians, then convert to degrees
-        angle = Math.atan2(nextY - prevY, nextX - prevX) * (180 / Math.PI);
-      }
+          angle = Math.atan2(nextY - prevY, nextX - prevX) * (180 / Math.PI);
+        }
 
-      setHeadPosition({ x: headX, y: headY, angle });
+        setHeadPosition({ x: headX, y: headY, angle });
+      };
+
+      const frameId = requestAnimationFrame(updateFrame);
+      return () => cancelAnimationFrame(frameId);
     }
-  }, [currentTime, duration, isDragging]);
+  }, [currentTime, duration, isDragging, updateWavePoints, getWaveYPosition]);
 
   // Get audio-reactive amplitude based on frequency data
   const getAudioAmplitude = useCallback(() => {

@@ -7,6 +7,26 @@
   {
     "name": "Sample Songs API",
     "type": "json",
-    "url": "https://example.com/songs.json"
+    "url": "/audio/sample-songs.json?v=1"
+  },
+  {
+    "name": "SpotifyProvider",
+    "type": "json",
+    "url": "/soundbound/spotify-manifest.json"
+  },
+  {
+    "name": "YoutubeProvider",
+    "type": "json",
+    "url": "/soundbound/youtube-manifest.json"
+  },
+  {
+    "name": "SoundcloudProvider",
+    "type": "json",
+    "url": "/soundbound/soundcloud-manifest.json"
+  },
+  {
+    "name": "SaavnProvider",
+    "type": "json",
+    "url": "/soundbound/saavn-manifest.json"
   }
 ]

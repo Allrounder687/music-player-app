@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "../store/ThemeContext";
-import { useMusic } from "../store/MusicContext";
+// import { useMusic } from "../store/MusicContext"; // No longer needed for audioData
+import { AudioAnalysisService } from "../store/AudioAnalysisService";
 
 export const SnakeSeekbar = ({
   currentTime,
@@ -13,7 +14,8 @@ export const SnakeSeekbar = ({
   const safeCurrentTime = isNaN(currentTime) ? 0 : currentTime;
   const safeDuration = isNaN(duration) ? 100 : duration;
   const { theme } = useTheme();
-  const { audioData } = useMusic();
+  // const { audioData } = useMusic(); // Direct access for performance
+
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [wavePoints, setWavePoints] = useState([]);
@@ -37,9 +39,9 @@ export const SnakeSeekbar = ({
     setWavePoints(initialWavePoints);
   }, [wavePointCount]);
 
-  // Calculate Y position for wave points with audio reactivity - memoized to avoid dependency issues
+  // Calculate Y position for wave points with audio reactivity
   const getWaveYPosition = useCallback(
-    (x, index, audioAmplitude = 1) => {
+    (x, index, audioAmplitude = 1, currentAudioData = null) => {
       // Base amplitude for the wave
       const baseAmplitude = 2;
 
@@ -48,7 +50,7 @@ export const SnakeSeekbar = ({
 
       // Create a more pronounced wave effect
       const frequency = 0.15; // Frequency for waves
-      const phase = Date.now() * 0.001; // Animation speed - kept faster from previous changes
+      const phase = Date.now() * 0.001; // Animation speed
       const offset = index * 0.02; // Offset based on index for varied wave
 
       // Use audio data to influence the wave if available
@@ -56,24 +58,24 @@ export const SnakeSeekbar = ({
       let phaseModulation = 0;
 
       if (
-        audioData &&
-        audioData.frequencyData &&
-        audioData.frequencyData.length > 0
+        currentAudioData &&
+        currentAudioData.frequencyData &&
+        currentAudioData.frequencyData.length > 0
       ) {
         // Use frequency data to modulate the wave
         const freqIndex = Math.floor(
-          (x / 100) * (audioData.frequencyData.length / 2)
+          (x / 100) * (currentAudioData.frequencyData.length / 2)
         );
-        if (freqIndex < audioData.frequencyData.length) {
+        if (freqIndex < currentAudioData.frequencyData.length) {
           // Normalize to 0-1 range and add small offset to avoid flat lines
           frequencyModulation =
-            (audioData.frequencyData[freqIndex] / 255) * 0.5 + 0.5;
+            (currentAudioData.frequencyData[freqIndex] / 255) * 0.5 + 0.5;
 
           // Use bass/mid/treble to influence phase
           phaseModulation =
-            (audioData.bass * 0.5 +
-              audioData.mid * 0.3 +
-              audioData.treble * 0.2) *
+            (currentAudioData.bass * 0.5 +
+              currentAudioData.mid * 0.3 +
+              currentAudioData.treble * 0.2) *
             Math.PI;
         }
       }
@@ -88,7 +90,7 @@ export const SnakeSeekbar = ({
 
       return wave1 + wave2;
     },
-    [audioData]
+    []
   );
 
   // Update wave points based on current playback percentage
@@ -111,9 +113,10 @@ export const SnakeSeekbar = ({
         safeDuration > 0 ? Math.min(safeCurrentTime / safeDuration, 1) : 0;
       updateWavePoints(percentage);
 
-      // Update head position
+      // We can't easily get currentAudioData here without querying, but that's fine for head position static calc
+      // Or we could query it, but maybe just use default for head calc outside animation loop
       const headX = percentage * 100;
-      const headY = getWaveYPosition(headX, 0);
+      const headY = getWaveYPosition(headX, 0); // Default amplitude
 
       // Calculate angle based on nearby points for head orientation
       let angle = 0;
@@ -137,39 +140,34 @@ export const SnakeSeekbar = ({
     updateWavePoints,
   ]);
 
-  // Get audio-reactive amplitude based on frequency data
-  const getAudioAmplitude = useCallback(() => {
-    if (!audioData || !audioData.bass) {
-      return 1; // Default amplitude if no audio data
-    }
-
-    // Use bass for more pronounced effect, with mid and treble for detail
-    const bassWeight = 0.6;
-    const midWeight = 0.3;
-    const trebleWeight = 0.1;
-
-    // Calculate weighted average
-    const amplitude =
-      (audioData.bass * bassWeight +
-        audioData.mid * midWeight +
-        audioData.treble * trebleWeight) *
-      2; // Multiply by 2 to make the effect more visible
-
-    // Ensure amplitude is at least 1 and at most 5
-    return Math.max(1, Math.min(5, amplitude));
-  }, [audioData]);
-
   // Animate wave points
   const animateWave = useCallback(() => {
-    const audioAmplitude = getAudioAmplitude();
+    // Poll data directly from service
+    const currentAudioData = AudioAnalysisService.getRealtimeData();
+
+    // Calculate amplitude locally
+    let audioAmplitude = 1;
+    if (currentAudioData && currentAudioData.bass) {
+      const bassWeight = 0.6;
+      const midWeight = 0.3;
+      const trebleWeight = 0.1;
+
+      const rawAmplitude =
+        (currentAudioData.bass * bassWeight +
+          currentAudioData.mid * midWeight +
+          currentAudioData.treble * trebleWeight) *
+        2;
+
+      audioAmplitude = Math.max(1, Math.min(5, rawAmplitude));
+    }
 
     setWavePoints((prevPoints) => {
       return prevPoints.map((point, index) => ({
         ...point,
-        y: getWaveYPosition(point.x, index, audioAmplitude),
+        y: getWaveYPosition(point.x, index, audioAmplitude, currentAudioData),
       }));
     });
-  }, [getAudioAmplitude, getWaveYPosition]);
+  }, [getWaveYPosition]);
 
   // Animation loop for wave animation
   useEffect(() => {
@@ -324,24 +322,26 @@ export const SnakeSeekbar = ({
 
   // Get audio-reactive glow intensity
   const getGlowIntensity = useCallback(() => {
-    if (!audioData || !audioData.volume) return 0.7;
-    return 0.5 + audioData.volume * 0.5; // Scale between 0.5 and 1.0
-  }, [audioData]);
+    const data = AudioAnalysisService.getRealtimeData();
+    if (!data || !data.volume) return 0.7;
+    return 0.5 + data.volume * 0.5; // Scale between 0.5 and 1.0
+  }, []);
 
   // Get stroke width based on audio intensity
   const getStrokeWidth = useCallback(
     (isActive) => {
-      if (!audioData || !audioData.volume) return isActive ? 2 : 1.5;
+      const data = AudioAnalysisService.getRealtimeData();
+      if (!data || !data.volume) return isActive ? 2 : 1.5;
 
       // Base width
       const baseWidth = isActive ? 2 : 1.5;
 
       // Add audio reactivity
-      const audioFactor = 1 + audioData.volume * 1.5; // Scale between 1 and 2.5
+      const audioFactor = 1 + data.volume * 1.5; // Scale between 1 and 2.5
 
       return baseWidth * audioFactor;
     },
-    [audioData]
+    []
   );
 
   // Split wave points into active and inactive
@@ -386,9 +386,8 @@ export const SnakeSeekbar = ({
           strokeWidth={getStrokeWidth(true)}
           fill="none"
           style={{
-            filter: `drop-shadow(0 0 ${
-              getGlowIntensity() * 3
-            }px ${getThemeColor(getGlowIntensity(), true)})`,
+            filter: `drop-shadow(0 0 ${getGlowIntensity() * 3
+              }px ${getThemeColor(getGlowIntensity(), true)})`,
           }}
         />
 

@@ -1,0 +1,52 @@
+{
+  "name": "YoutubeProvider",
+  "version": "1.0.0",
+  "description": "YouTube music provider",
+  "tracks": [
+    {
+      "id": "youtube_track_1",
+      "title": "Despacito",
+      "artist": "Luis Fonsi ft. Daddy Yankee",
+      "album": "YouTube Hits",
+      "duration": 282,
+      "imageUrl": "https://i.ytimg.com/vi/kJQP7kiw5Fk/maxresdefault.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "youtube_track_2",
+      "title": "See You Again",
+      "artist": "Wiz Khalifa ft. Charlie Puth",
+      "album": "Furious 7 Soundtrack",
+      "duration": 237,
+      "imageUrl": "https://i.ytimg.com/vi/RgKAFK5djSk/maxresdefault.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "youtube_track_3",
+      "title": "Uptown Funk",
+      "artist": "Mark Ronson ft. Bruno Mars",
+      "album": "YouTube Hits",
+      "duration": 270,
+      "imageUrl": "https://i.ytimg.com/vi/OPf0YbXqDm0/maxresdefault.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "youtube_track_4",
+      "title": "Sugar",
+      "artist": "Maroon 5",
+      "album": "V",
+      "duration": 251,
+      "imageUrl": "https://i.ytimg.com/vi/09R8_2nJtjg/maxresdefault.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "youtube_track_5",
+      "title": "Gangnam Style",
+      "artist": "PSY",
+      "album": "YouTube Classics",
+      "duration": 253,
+      "imageUrl": "https://i.ytimg.com/vi/9bZkp7q19f0/maxresdefault.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    }
+  ]
+}

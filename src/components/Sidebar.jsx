@@ -14,7 +14,7 @@ import { useTheme } from "../store/ThemeContext";
 
 export const Sidebar = () => {
   const [showFileSelector, setShowFileSelector] = useState(false);
-  // Removed Electron test state
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { theme } = useTheme();
 
   const navItems = [
@@ -35,14 +35,23 @@ export const Sidebar = () => {
   return (
     <>
       <div
-        className={`w-56 bg-${theme.colors.background.secondary} text-${theme.colors.text.secondary} flex flex-col h-full border-r border-${theme.colors.border}`}
+        className={`fixed left-0 top-8 bottom-0 ${isCollapsed ? 'w-16' : 'w-56'} text-${theme.colors.text.secondary} flex flex-col border-r z-40 transition-all duration-300 gpu-accelerated`}
+        style={{ 
+          backgroundColor: theme.colors.background.secondary,
+          borderColor: theme.colors.border.primary
+        }}
       >
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <FaMusic className={`text-${theme.colors.primary.main} text-xl`} />
-            <h1 className="text-lg font-bold">Music App</h1>
+            <FaMusic 
+              className="text-xl cursor-pointer" 
+              style={{ color: theme.colors.primary.main }}
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            />
+            {!isCollapsed && <h1 className="text-lg font-bold">Music App</h1>}
           </div>
-          <ThemeSelector />
+          {!isCollapsed && <ThemeSelector />}
         </div>
 
         <nav className="flex-1 p-2 space-y-1">
@@ -53,24 +62,36 @@ export const Sidebar = () => {
               className={({ isActive }) =>
                 `flex items-center p-2 rounded-lg transition-colors ${
                   isActive
-                    ? `bg-${theme.colors.primary.main} text-${theme.colors.text.primary}`
-                    : `hover:bg-${theme.colors.background.tertiary}`
-                }`
+                    ? 'text-white'
+                    : `hover:bg-opacity-20 hover:bg-white`
+                } ${isCollapsed ? 'justify-center' : ''}`
               }
+              style={({ isActive }) => ({
+                backgroundColor: isActive ? theme.colors.primary.main : 'transparent',
+                color: isActive ? 'white' : theme.colors.text.secondary
+              })}
+              title={isCollapsed ? item.label : ''}
             >
-              {item.icon}
-              <span>{item.label}</span>
+              <span className={`${isCollapsed ? 'text-lg' : ''}`}>
+                {React.cloneElement(item.icon, { 
+                  className: isCollapsed ? '' : 'mr-3',
+                  style: { color: 'currentColor' }
+                })}
+              </span>
+              {!isCollapsed && <span>{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className={`p-3 border-t border-${theme.colors.border}`}>
+        <div className="p-3 border-t" style={{ borderColor: theme.colors.border.primary }}>
           <button
             onClick={handleOpenFolder}
-            className={`w-full flex items-center p-2 rounded-lg hover:bg-${theme.colors.background.tertiary} transition-colors mb-2`}
+            className={`w-full flex items-center p-2 rounded-lg hover:bg-opacity-20 hover:bg-white transition-colors mb-2 ${isCollapsed ? 'justify-center' : ''}`}
+            style={{ color: theme.colors.text.secondary }}
+            title={isCollapsed ? "Open Folder" : ''}
           >
-            <FaFolder className="mr-3" />
-            <span>Open Folder</span>
+            <FaFolder className={isCollapsed ? '' : 'mr-3'} />
+            {!isCollapsed && <span>Open Folder</span>}
           </button>
 
           <button

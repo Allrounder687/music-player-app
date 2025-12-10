@@ -1,0 +1,555 @@
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
+import { useMusic } from "../store/MusicContext";
+import { formatTime } from "../utils/audioUtils";
+
+/**
+ * SnakeSeekbar component - A visually engaging seekbar that displays as a water-filled container
+ *
+ * @param {Object} props - Component props
+ * @param {number} props.value - Current value of the seekbar (current time in seconds)
+ * @param {number} props.min - Minimum value of the seekbar (usually 0)
+ * @param {number} props.max - Maximum value of the seekbar (duration in seconds)
+ * @param {Function} props.onChange - Callback when seekbar value changes
+ * @param {string} props.className - Additional CSS classes
+ */
+export const SnakeSeekbar = ({
+  value,
+  min = 0,
+  max = 100,
+  onChange,
+  className = "",
+}) => {
+  // Refs
+  const containerRef = useRef(null);
+  const animationRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
+  // State
+  const [isDragging, setIsDragging] = useState(false);
+  const [hoverPosition, setHoverPosition] = useState(null);
+  const [wavePoints, setWavePoints] = useState([]);
+
+  // Get audio data from context
+  const { audioData, isPlaying } = useMusic();
+
+  // Calculate progress percentage - memoized to prevent recalculation
+  const progress = useMemo(() => {
+    return ((value - min) / (max - min)) * 100;
+  }, [value, min, max]);
+
+  // Configuration for the water wave - memoized to prevent recreation
+  const waveConfig = useMemo(
+    () => ({
+      pointCount: 50, // Number of points in the wave
+      baseAmplitude: 1.2, // Base amplitude of the wave
+      waveFrequency: 0.1, // Frequency of the wave
+      animationSpeed: 0.0005, // Speed of the animation
+    }),
+    []
+  );
+
+  // Generate initial wave points on mount
+  useEffect(() => {
+    generateWavePoints();
+
+    // Clean up animation frame on unmount
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+
+  // Calculate Y position for wave points with water-like motion
+  const getWaveYPosition = useCallback(
+    (x, index, audioAmplitude = 1) => {
+      const { baseAmplitude, waveFrequency, animationSpeed } = waveConfig;
+
+      // Apply audio reactivity to the amplitude with smoother effect
+      const amplitude = baseAmplitude * audioAmplitude;
+
+      // Create a more fluid wave effect with water-like frequency
+      const frequency = waveFrequency;
+      const phase = Date.now() * animationSpeed;
+      const offset = index * 0.01; // Smaller offset for more consistent waves
+
+      // Process audio data if available
+      let bassInfluence = 0;
+      let midInfluence = 0;
+      let beatAmplification = 1;
+
+      if (audioData && typeof audioData === "object") {
+        // Process bass/mid/treble data
+        if (typeof audioData.bass === "number") {
+          bassInfluence = audioData.bass * 0.7;
+          // Apply beat detection with smoother transition
+          if (audioData.beatDetected) {
+            beatAmplification = 1.2 + bassInfluence * 0.5;
+          }
+        }
+
+        if (typeof audioData.mid === "number") {
+          midInfluence = audioData.mid * 0.5;
+        }
+      }
+
+      // Create multiple wave components with different frequencies for water-like effect
+
+      // Primary wave - main water surface
+      const primaryWave =
+        Math.sin(x * frequency + phase + offset) *
+        amplitude *
+        beatAmplification;
+
+      // Secondary wave - smaller ripples
+      const secondaryWave =
+        Math.sin(x * frequency * 0.5 + phase * 1.2 + offset * 2) *
+        (amplitude * 0.4);
+
+      // Third wave component - very small ripples
+      const tertiaryWave =
+        Math.sin(x * frequency * 0.25 + phase * 0.8 + offset * 3) *
+        (amplitude * 0.2);
+
+      // Combine waves with smoothing for water-like effect
+      return primaryWave + secondaryWave + tertiaryWave;
+    },
+    [waveConfig, audioData]
+  );
+
+  // Update wave points when audio data changes or during playback
+  useEffect(() => {
+    // Always generate wave points, but with different animation speeds
+    const animate = () => {
+      if (!isDraggingRef.current) {
+        generateWavePoints();
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    // Clean up animation frame
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [audioData]);
+
+  // Generate wave points based on audio data and current time
+  const generateWavePoints = () => {
+    const { pointCount } = waveConfig;
+    const newPoints = [];
+
+    // Get audio amplitude
+    const audioAmplitude = getAudioAmplitude();
+
+    for (let i = 0; i < pointCount; i++) {
+      // Calculate position along the seekbar (0 to 1)
+      const position = i / (pointCount - 1);
+
+      // Calculate wave height based on position and audio data
+      const y = getWaveYPosition(position * 100, i, audioAmplitude);
+
+      newPoints.push({
+        x: position * 100, // X position in percentage
+        y,
+        active: position * 100 <= progress,
+      });
+    }
+
+    setWavePoints(newPoints);
+  };
+
+  // Get audio amplitude based on audio data
+  const getAudioAmplitude = () => {
+    if (!audioData) return 1;
+
+    const { bass = 0, mid = 0, treble = 0, volume = 0 } = audioData;
+
+    // Calculate weighted average
+    const amplitude =
+      (bass * 0.6 + mid * 0.3 + treble * 0.1 + volume * 0.5) / 2;
+
+    // Ensure amplitude is at least 1 and at most 3
+    return Math.max(1, Math.min(3, amplitude || 1));
+  };
+
+  // Handle mouse events for seeking
+  const handleMouseDown = (e) => {
+    if (!containerRef.current) return;
+
+    setIsDragging(true);
+    isDraggingRef.current = true;
+    updateSeekPosition(e);
+
+    // Add event listeners for drag
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      updateSeekPosition(e);
+    } else {
+      updateHoverPosition(e);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    isDraggingRef.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseEnter = (e) => {
+    updateHoverPosition(e);
+    containerRef.current?.addEventListener("mousemove", handleMouseMove);
+  };
+
+  const handleMouseLeave = () => {
+    setHoverPosition(null);
+    containerRef.current?.removeEventListener("mousemove", handleMouseMove);
+  };
+
+  // Update seek position based on mouse position
+  const updateSeekPosition = (e) => {
+    if (!containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+    const newValue = percentage * (max - min) + min;
+
+    if (onChange) {
+      onChange(newValue);
+    }
+  };
+
+  // Update hover position for tooltip
+  const updateHoverPosition = (e) => {
+    if (!containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const percentage = Math.min(Math.max(offsetX / rect.width, 0), 1);
+    const hoverTime = percentage * (max - min) + min;
+
+    setHoverPosition({
+      x: percentage * 100,
+      time: hoverTime,
+    });
+  };
+
+  // Create water-like wave path for the entire seekbar
+  const createFullWavePath = useCallback((points) => {
+    if (points.length === 0) return "";
+
+    const centerY = 8; // Center point for the wave
+
+    // Start at the first point
+    let path = `M ${points[0].x},${centerY + points[0].y}`;
+
+    // Use cubic Bezier curves for smoother waves
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const current = points[i];
+
+      // Calculate control points for cubic Bezier curve
+      const cp1X = prev.x + (current.x - prev.x) / 3;
+      const cp1Y = centerY + prev.y;
+      const cp2X = current.x - (current.x - prev.x) / 3;
+      const cp2Y = centerY + current.y;
+
+      // Add cubic Bezier curve segment
+      path += ` C ${cp1X},${cp1Y} ${cp2X},${cp2Y} ${current.x},${
+        centerY + current.y
+      }`;
+    }
+
+    return path;
+  }, []);
+
+  // Get theme color based on active state
+  const getThemeColor = useCallback((intensity, isActive = true) => {
+    return isActive
+      ? `rgba(168, 85, 247, ${intensity})` // Purple for active
+      : `rgba(107, 114, 128, ${intensity})`; // Gray for inactive
+  }, []);
+
+  // Get water color based on audio data
+  const getWaterColor = useCallback(
+    (intensity) => {
+      // Base color is purple
+      let r = 168,
+        g = 85,
+        b = 247;
+
+      // Adjust color based on audio data if available
+      if (audioData && typeof audioData === "object") {
+        if (audioData.beatDetected) {
+          // Brighter on beats
+          r = Math.min(190, r + 20);
+          g = Math.min(110, g + 25);
+          b = Math.min(255, b + 10);
+        }
+
+        // Adjust based on bass/treble balance
+        if (
+          typeof audioData.bass === "number" &&
+          typeof audioData.treble === "number"
+        ) {
+          const bassInfluence = audioData.bass * 20;
+          const trebleInfluence = audioData.treble * 20;
+
+          // More bass = more red/purple
+          r = Math.min(200, r + bassInfluence);
+
+          // More treble = more blue
+          b = Math.min(255, b + trebleInfluence);
+        }
+      }
+
+      return `rgba(${r}, ${g}, ${b}, ${intensity})`;
+    },
+    [audioData]
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative h-8 cursor-pointer ${className}`}
+      onMouseDown={handleMouseDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      role="slider"
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      aria-label="Audio seekbar"
+      tabIndex={0}
+    >
+      {/* SVG for water-filling wave container */}
+      <svg
+        className="w-full h-full absolute top-0 left-0"
+        viewBox="0 0 100 16"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          {/* Water gradient - from lighter to darker */}
+          <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={getWaterColor(0.7)} />
+            <stop offset="100%" stopColor={getWaterColor(0.9)} />
+          </linearGradient>
+
+          {/* Water surface gradient - more transparent */}
+          <linearGradient
+            id="waterSurfaceGradient"
+            x1="0%"
+            y1="0%"
+            x2="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stopColor={getWaterColor(0.9)}
+              stopOpacity="0.7"
+            />
+            <stop
+              offset="100%"
+              stopColor={getWaterColor(0.7)}
+              stopOpacity="0.3"
+            />
+          </linearGradient>
+
+          {/* Container border gradient */}
+          <linearGradient id="borderGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={getThemeColor(0.4, false)} />
+            <stop offset="100%" stopColor={getThemeColor(0.2, false)} />
+          </linearGradient>
+
+          {/* Container background gradient */}
+          <linearGradient
+            id="containerGradient"
+            x1="0%"
+            y1="0%"
+            x2="0%"
+            y2="100%"
+          >
+            <stop offset="0%" stopColor="rgba(30, 30, 40, 0.2)" />
+            <stop offset="100%" stopColor="rgba(20, 20, 30, 0.1)" />
+          </linearGradient>
+
+          {/* Glow filter for water */}
+          <filter id="waterGlow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="1.2" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+
+          {/* Clip path for the water level */}
+          <clipPath id="waterClip">
+            <rect x="0" y="0" width={`${progress}`} height="16" />
+          </clipPath>
+        </defs>
+
+        {/* Container background - glass-like effect */}
+        <rect
+          x="0"
+          y="0"
+          width="100"
+          height="16"
+          rx="3"
+          ry="3"
+          fill="url(#containerGradient)"
+          fillOpacity="0.3"
+        />
+
+        {/* Container border - slightly rounded rectangle */}
+        <rect
+          x="0.5"
+          y="0.5"
+          width="99"
+          height="15"
+          rx="3"
+          ry="3"
+          stroke="url(#borderGradient)"
+          strokeWidth="0.8"
+          fill="none"
+        />
+
+        {/* Full wave pattern - this shows the entire wave across the seekbar */}
+        <path
+          d={createFullWavePath(wavePoints)}
+          stroke={getThemeColor(0.3, false)}
+          strokeWidth="0.5"
+          fill="none"
+          strokeDasharray="1,1"
+        />
+
+        {/* Water wave animation - clipped to progress */}
+        <g clipPath="url(#waterClip)">
+          {/* Water background */}
+          <rect
+            x="0"
+            y="0"
+            width="100"
+            height="16"
+            fill="url(#waterGradient)"
+            fillOpacity="0.6"
+          />
+
+          {/* Water surface - wave pattern */}
+          <path
+            d={createFullWavePath(wavePoints)}
+            stroke={getWaterColor(1.0)}
+            strokeWidth="1.2"
+            fill="none"
+            style={{
+              filter: audioData?.volume > 0.05 ? "url(#waterGlow)" : "none",
+            }}
+          />
+
+          {/* Water ripples - subtle circular patterns */}
+          {Array.from({ length: 3 }).map((_, i) => {
+            // Create ripples at different positions based on audio data
+            const rippleX = progress * Math.random() * 0.8 + progress * 0.1;
+            const rippleY = 8 + Math.sin(Date.now() * 0.001 + i) * 2;
+            const rippleSize = 0.5 + (audioData?.volume || 0.5) * 1.5;
+            const rippleOpacity =
+              0.2 + Math.sin(Date.now() * 0.002 + i * 0.5) * 0.1;
+
+            return (
+              <circle
+                key={i}
+                cx={rippleX}
+                cy={rippleY}
+                r={rippleSize}
+                fill="white"
+                fillOpacity={rippleOpacity}
+                style={{
+                  mixBlendMode: "soft-light",
+                  display: progress > 5 ? "block" : "none",
+                }}
+              />
+            );
+          })}
+
+          {/* Water bubbles on beat */}
+          {audioData?.beatDetected &&
+            Array.from({ length: 2 }).map((_, i) => {
+              const bubbleX = Math.min(progress - 3 + i * 2, progress - 1);
+              const bubbleY = 8 + Math.sin(Date.now() * 0.01 + i) * 2;
+              const bubbleSize = 0.5 + i * 0.3;
+
+              return bubbleX > 0 ? (
+                <circle
+                  key={i}
+                  cx={bubbleX}
+                  cy={bubbleY}
+                  r={bubbleSize}
+                  fill="white"
+                  fillOpacity="0.7"
+                  className="animate-ping"
+                  style={{ animationDuration: `${0.8 + i * 0.2}s` }}
+                />
+              ) : null;
+            })}
+        </g>
+
+        {/* Water edge - creates a meniscus effect at the water's edge */}
+        {progress > 1 && progress < 99 && (
+          <g>
+            {/* Water edge highlight */}
+            <path
+              d={`M ${progress},1 Q ${progress + 1},8 ${progress},15`}
+              stroke={getWaterColor(1.0)}
+              strokeWidth="0.5"
+              strokeOpacity="0.9"
+              fill="none"
+            />
+
+            {/* Water surface point */}
+            <circle
+              cx={progress}
+              cy={
+                8 +
+                (wavePoints.length > 0
+                  ? wavePoints[Math.floor((progress / 100) * wavePoints.length)]
+                      ?.y || 0
+                  : 0)
+              }
+              r="1.2"
+              fill={getWaterColor(1.0)}
+              style={{
+                filter: `drop-shadow(0 0 1px ${getWaterColor(0.9)})`,
+              }}
+            />
+          </g>
+        )}
+      </svg>
+
+      {/* Time tooltip on hover */}
+      {hoverPosition && (
+        <div
+          className="absolute bottom-full mb-2 bg-gray-800 text-white text-xs px-2 py-1 rounded transform -translate-x-1/2 pointer-events-none"
+          style={{ left: `${hoverPosition.x}%` }}
+        >
+          {formatTime(hoverPosition.time)}
+        </div>
+      )}
+
+      {/* Accessibility: Screen reader only time display */}
+      <span className="sr-only">
+        Current time: {formatTime(value)} of {formatTime(max)}
+      </span>
+    </div>
+  );
+};

@@ -1,0 +1,52 @@
+{
+  "name": "SpotifyProvider",
+  "version": "1.0.0",
+  "description": "Spotify music provider",
+  "tracks": [
+    {
+      "id": "spotify_track_1",
+      "title": "Shape of You",
+      "artist": "Ed Sheeran",
+      "album": "÷ (Divide)",
+      "duration": 235,
+      "imageUrl": "https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "spotify_track_2",
+      "title": "Blinding Lights",
+      "artist": "The Weeknd",
+      "album": "After Hours",
+      "duration": 200,
+      "imageUrl": "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "spotify_track_3",
+      "title": "Dance Monkey",
+      "artist": "Tones and I",
+      "album": "The Kids Are Coming",
+      "duration": 210,
+      "imageUrl": "https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd281166c5118f",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "spotify_track_4",
+      "title": "Someone You Loved",
+      "artist": "Lewis Capaldi",
+      "album": "Divinely Uninspired To A Hellish Extent",
+      "duration": 182,
+      "imageUrl": "https://i.scdn.co/image/ab67616d0000b273fc2101e6889d6ce9025f85f2",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "spotify_track_5",
+      "title": "Bad Guy",
+      "artist": "Billie Eilish",
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "duration": 194,
+      "imageUrl": "https://i.scdn.co/image/ab67616d0000b273a91c10fe9472d9bd89802e5a",
+      "previewUrl": "/audio/sample1.mp3"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "SaavnProvider",
+  "version": "1.0.0",
+  "description": "Saavn music provider",
+  "tracks": [
+    {
+      "id": "saavn_track_1",
+      "title": "Chaiyya Chaiyya",
+      "artist": "Sukhwinder Singh",
+      "album": "Dil Se",
+      "duration": 320,
+      "imageUrl": "https://c.saavncdn.com/042/Dil-Se-Hindi-1998-20221212023139-500x500.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "saavn_track_2",
+      "title": "Jai Ho",
+      "artist": "A.R. Rahman",
+      "album": "Slumdog Millionaire",
+      "duration": 318,
+      "imageUrl": "https://c.saavncdn.com/588/Slumdog-Millionaire-Hindi-2008-20221210014016-500x500.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "saavn_track_3",
+      "title": "Tum Hi Ho",
+      "artist": "Arijit Singh",
+      "album": "Aashiqui 2",
+      "duration": 260,
+      "imageUrl": "https://c.saavncdn.com/274/Aashiqui-2-Hindi-2013-500x500.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "saavn_track_4",
+      "title": "Kun Faya Kun",
+      "artist": "A.R. Rahman",
+      "album": "Rockstar",
+      "duration": 378,
+      "imageUrl": "https://c.saavncdn.com/977/Rockstar-Hindi-2011-20221210093459-500x500.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "saavn_track_5",
+      "title": "Channa Mereya",
+      "artist": "Arijit Singh",
+      "album": "Ae Dil Hai Mushkil",
+      "duration": 289,
+      "imageUrl": "https://c.saavncdn.com/823/Ae-Dil-Hai-Mushkil-Hindi-2016-500x500.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    }
+  ]
+}

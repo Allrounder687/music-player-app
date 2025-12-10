@@ -1,0 +1,52 @@
+{
+  "name": "SoundcloudProvider",
+  "version": "1.0.0",
+  "description": "SoundCloud music provider",
+  "tracks": [
+    {
+      "id": "soundcloud_track_1",
+      "title": "Indie Summer Mix",
+      "artist": "ChillCloud",
+      "album": "SoundCloud Mixes",
+      "duration": 320,
+      "imageUrl": "https://i1.sndcdn.com/artworks-000108347290-w61lwb-t500x500.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "soundcloud_track_2",
+      "title": "Lo-Fi Hip Hop Beat",
+      "artist": "LoFiBeats",
+      "album": "Study Mix",
+      "duration": 185,
+      "imageUrl": "https://i1.sndcdn.com/artworks-000232575496-s41z9i-t500x500.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "soundcloud_track_3",
+      "title": "Deep House Vibes",
+      "artist": "HouseMusic",
+      "album": "SoundCloud Mixes",
+      "duration": 290,
+      "imageUrl": "https://i1.sndcdn.com/artworks-000149308680-z7t7y6-t500x500.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "id": "soundcloud_track_4",
+      "title": "Chill Electronic",
+      "artist": "ElectronicBeats",
+      "album": "Relax Mix",
+      "duration": 240,
+      "imageUrl": "https://i1.sndcdn.com/artworks-000108347290-w61lwb-t500x500.jpg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "id": "soundcloud_track_5",
+      "title": "Ambient Sounds",
+      "artist": "AmbientMusic",
+      "album": "Sleep Mix",
+      "duration": 310,
+      "imageUrl": "https://i1.sndcdn.com/artworks-000149308680-z7t7y6-t500x500.jpg",
+      "previewUrl": "/audio/sample1.mp3"
+    }
+  ]
+}

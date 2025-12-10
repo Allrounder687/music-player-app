@@ -1,0 +1,47 @@
+/* Search input styles to ensure text is visible in all themes */
+input[type="text"],
+input[type="search"] {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+}
+
+input[type="text"]::placeholder,
+input[type="search"]::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+/* Focus styles */
+input[type="text"]:focus,
+input[type="search"]:focus {
+  border-color: var(--accent-color) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* Theme-specific focus styles */
+.theme-royalBlue input[type="text"]:focus,
+.theme-royalBlue input[type="search"]:focus {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.theme-crimsonDesert input[type="text"]:focus,
+.theme-crimsonDesert input[type="search"]:focus {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+.theme-black input[type="text"]:focus,
+.theme-black input[type="search"]:focus {
+  box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.2);
+}
+
+.theme-midnightBlack input[type="text"]:focus,
+.theme-midnightBlack input[type="search"]:focus {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.theme-emeraldNight input[type="text"]:focus,
+.theme-emeraldNight input[type="search"]:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}

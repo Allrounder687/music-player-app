@@ -1,0 +1,44 @@
+{
+  "songs": [
+    {
+      "title": "Ambient Melody",
+      "artist": "Sound Waves",
+      "album": "Peaceful Moments",
+      "duration": 180,
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "title": "Electronic Dreams",
+      "artist": "Digital Artist",
+      "album": "Future Sounds",
+      "duration": 210,
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "title": "Acoustic Journey",
+      "artist": "Guitar Master",
+      "album": "Unplugged Sessions",
+      "duration": 195,
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3"
+    },
+    {
+      "title": "Jazz Improvisation",
+      "artist": "Smooth Quartet",
+      "album": "Late Night Jazz",
+      "duration": 240,
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample2.mp3"
+    },
+    {
+      "title": "Classical Piece",
+      "artist": "Symphony Orchestra",
+      "album": "Timeless Classics",
+      "duration": 300,
+      "imageUrl": "/images/album-placeholder.svg",
+      "previewUrl": "/audio/sample1.mp3"
+    }
+  ]
+}

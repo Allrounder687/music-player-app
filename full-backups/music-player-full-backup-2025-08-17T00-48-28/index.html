@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Player</title>
+    <link rel="icon" href="/public/favicon.ico" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/renderer/App.jsx"></script>
+    <!-- Ensure Electron preload script is loaded -->
+    <script>
+      // Check if we're running in Electron
+      if (window.electron) {
+        console.log("Running in Electron environment");
+      } else {
+        console.log("Running in browser environment");
+      }
+    </script>
+  </body>
+</html>

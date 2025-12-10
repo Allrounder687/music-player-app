@@ -8,57 +8,12 @@ import React, {
 
 // === Online Music Support ===
 import { getOnlineSongs, refreshOnlineSongs, isOnlineTrack } from "../services/onlineMusicService";
+import LibraryCleanupService from "../services/libraryCleanupService.js";
 
 const MusicContext = createContext();
 
-// Sample tracks data with local resources
-const sampleTracks = [
-  {
-    id: "1",
-    title: "Piano Loop 1",
-    artist: "Sample Artist",
-    album: "Sample Album",
-    duration: 30, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample1.mp3",
-  },
-  {
-    id: "2",
-    title: "Piano Loop 2",
-    artist: "Sample Artist",
-    album: "Sample Album",
-    duration: 30, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample2.mp3",
-  },
-  {
-    id: "3",
-    title: "Drum Beat",
-    artist: "Sample Artist",
-    album: "Sample Album",
-    duration: 45, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample3.mp3",
-  },
-  {
-    id: "4",
-    title: "Piano Loop (Alternative)",
-    artist: "Sample Artist",
-    album: "Sample Album 2",
-    duration: 30, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample1.mp3",
-  },
-  {
-    id: "5",
-    title: "Piano Loop (Remix)",
-    artist: "Sample Artist",
-    album: "Sample Album 2",
-    duration: 30, // in seconds
-    imageUrl: "/images/album-placeholder.svg",
-    previewUrl: "/audio/sample2.mp3",
-  },
-];
+// No sample tracks - start with empty library
+const sampleTracks = [];
 
 const initialState = {
   tracks: sampleTracks,
@@ -71,7 +26,7 @@ const initialState = {
   volume: 0.8,
   currentTime: 0,
   duration: 0,
-  queue: sampleTracks,
+  queue: [],
   currentTrackIndex: -1,
   repeat: false,
   shuffle: false,
@@ -101,6 +56,16 @@ const initialState = {
 };
 
 function musicReducer(state, action) {
+  // Debug logging for state changes (temporary)
+  /*
+  if (action.type !== "SET_AUDIO_DATA" && action.type !== "SET_CURRENT_TIME") {
+    console.log(`Reducer Action: ${action.type}`, { 
+      payload: action, 
+      prevIsPlaying: state.isPlaying 
+    });
+  }
+  */
+
   switch (action.type) {
     case "ADD_TO_QUEUE": {
       const { track, playNext = false } = action;
@@ -363,13 +328,6 @@ function musicReducer(state, action) {
       return {
         ...state,
         currentTime: action.time,
-        // If we're at the end of the track, handle based on repeat mode
-        isPlaying:
-          action.time >= state.duration
-            ? state.repeat
-              ? true
-              : false
-            : state.isPlaying,
       };
 
     case "SET_DURATION":
@@ -499,8 +457,8 @@ function musicReducer(state, action) {
           track &&
           track.id &&
           track.title &&
-          // Allow tracks with previewUrl or filePath (for imported local files)
-          (track.previewUrl || track.filePath)
+          // Allow tracks with previewUrl, filePath, or File object (for imported local files)
+          (track.previewUrl || track.filePath || track.file instanceof File)
       );
 
       if (validTracks.length === 0) {
@@ -509,6 +467,7 @@ function musicReducer(state, action) {
       }
 
       console.log("Valid tracks for queue:", validTracks);
+      console.log("Sample track structure:", validTracks[0]);
 
       // For imported tracks, add them to a new "Imported" playlist if they don't exist yet
       const newTracks = validTracks.filter(
@@ -726,6 +685,12 @@ function musicReducer(state, action) {
         onlineError: null,
       };
 
+    case "SET_TRACKS":
+      return {
+        ...state,
+        tracks: action.tracks,
+      };
+
     default:
       return state;
   }
@@ -739,11 +704,30 @@ export const MusicProvider = ({ children }) => {
       if (savedState) {
         const parsedState = JSON.parse(savedState);
 
-        // Combine sample tracks with custom tracks
-        const allTracks = [
-          ...initialState.tracks,
-          ...(parsedState.customTracks || []),
-        ];
+        // Only restore tracks that have persistent URLs (not File-based imports)
+        const originalTrackCount = (parsedState.customTracks || []).length;
+        const validCustomTracks = (parsedState.customTracks || []).filter(track => {
+          // Keep tracks that have HTTP URLs (streaming) or file paths that can be accessed via Electron
+          const hasValidSource = (track.previewUrl && track.previewUrl.startsWith('http')) ||
+            (track.filePath && !track.file); // filePath without File object means it was from Electron file access
+          if (!hasValidSource) {
+            console.log(`Skipping track "${track.title}" - File-based imports are not persisted across sessions`);
+            return false;
+          }
+          return true;
+        });
+
+        // Store info about skipped tracks for notification
+        const skippedTrackCount = originalTrackCount - validCustomTracks.length;
+        if (skippedTrackCount > 0) {
+          // Store this info to show a notification after the component mounts
+          setTimeout(() => {
+            console.info(`${skippedTrackCount} imported tracks were not restored. Please re-import your local files.`);
+          }, 1000);
+        }
+
+        // Use only valid custom tracks (no sample tracks)
+        const allTracks = validCustomTracks;
 
         // Find the previously playing track if it exists
         let currentTrack = null;
@@ -787,10 +771,23 @@ export const MusicProvider = ({ children }) => {
 
   // Save state to localStorage when it changes
   useEffect(() => {
-    // Extract custom tracks (non-sample tracks)
-    const customTracks = state.tracks.filter(
-      (track) => !track.previewUrl?.startsWith("/audio/")
-    );
+    // Only save tracks that can be restored (exclude File-based imports)
+    const customTracks = state.tracks
+      .filter((track) => {
+        // Exclude File-based imports (they can't be restored after app restart)
+        if (track.file instanceof File) {
+          console.log(`Not persisting File-based track: ${track.title}`);
+          return false;
+        }
+
+        // Keep tracks with HTTP URLs or Electron file paths
+        return track.previewUrl?.startsWith('http') || track.filePath;
+      })
+      .map(track => {
+        // Create a serializable version of the track (remove any non-serializable properties)
+        const { file, ...serializableTrack } = track;
+        return serializableTrack;
+      });
 
     const stateToSave = {
       volume: state.volume,
@@ -828,7 +825,7 @@ export const MusicProvider = ({ children }) => {
   const getTrackById = (trackId) => {
     const localTrack = state.tracks.find((track) => track.id === trackId);
     if (localTrack) return localTrack;
-    
+
     const onlineTrack = state.onlineTracks.find((track) => track.id === trackId);
     return onlineTrack;
   };
@@ -870,7 +867,7 @@ export const MusicProvider = ({ children }) => {
   // Load online tracks from all configured sources
   const loadOnlineTracks = useCallback(async () => {
     dispatch({ type: "LOAD_ONLINE_TRACKS_START" });
-    
+
     try {
       const onlineTracks = await getOnlineSongs();
       dispatch({ type: "LOAD_ONLINE_TRACKS_SUCCESS", tracks: onlineTracks });
@@ -884,7 +881,7 @@ export const MusicProvider = ({ children }) => {
   // Refresh online tracks
   const refreshOnlineMusic = useCallback(async () => {
     dispatch({ type: "LOAD_ONLINE_TRACKS_START" });
-    
+
     try {
       const onlineTracks = await refreshOnlineSongs();
       dispatch({ type: "LOAD_ONLINE_TRACKS_SUCCESS", tracks: onlineTracks });
@@ -906,6 +903,48 @@ export const MusicProvider = ({ children }) => {
     console.log("=== Online Music Support: Initializing online music service ===");
     loadOnlineTracks();
   }, [loadOnlineTracks]);
+
+  // Cleanup invalid tracks function
+  const removeInvalidTrack = useCallback((trackId) => {
+    console.log(`Removing invalid track: ${trackId}`);
+    dispatch({ type: "DELETE_TRACK", trackId });
+  }, []);
+
+  // Expose cleanup function globally for AudioPlayer
+  useEffect(() => {
+    window.removeInvalidTrack = removeInvalidTrack;
+    return () => {
+      delete window.removeInvalidTrack;
+    };
+  }, [removeInvalidTrack]);
+
+  // Perform library health check on mount
+  useEffect(() => {
+    const performHealthCheck = async () => {
+      try {
+        const healthResults = await LibraryCleanupService.healthCheck(state.tracks);
+        console.log('Library health check:', healthResults);
+
+        if (healthResults.withoutSource > 0) {
+          console.warn(`Found ${healthResults.withoutSource} tracks without valid audio sources`);
+
+          // Optionally perform automatic cleanup
+          const cleanupResults = await LibraryCleanupService.cleanupLibrary(state.tracks);
+          if (cleanupResults.removed > 0) {
+            // Update the tracks in state
+            dispatch({ type: "SET_TRACKS", tracks: cleanupResults.valid });
+          }
+        }
+      } catch (error) {
+        console.error('Error during library health check:', error);
+      }
+    };
+
+    // Only run health check if we have tracks
+    if (state.tracks.length > 0) {
+      performHealthCheck();
+    }
+  }, []); // Run only once on mount
 
   const value = {
     ...state,
@@ -965,6 +1004,8 @@ export const MusicProvider = ({ children }) => {
     refreshOnlineMusic, // Refresh online tracks
     clearOnlineTracks, // Clear online tracks
     isOnlineTrack, // Check if track is from online source
+    // === Library Cleanup ===
+    removeInvalidTrack, // Remove invalid tracks
   };
 
   return (

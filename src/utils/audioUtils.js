@@ -9,6 +9,30 @@
  * @returns {Promise<string>} - Blob URL that can be used in an audio element
  */
 export const createAudioUrl = async (filePath) => {
+  // Validate input
+  if (!filePath) {
+    throw new Error('No file path provided');
+  }
+
+  // If it's a File object, handle it directly
+  if (typeof filePath === "object" && filePath instanceof File) {
+    console.log(`Creating blob URL for File object: ${filePath.name}, size: ${filePath.size}, type: ${filePath.type}`);
+    try {
+      const blobUrl = URL.createObjectURL(filePath);
+      console.log(`Successfully created blob URL for file: ${blobUrl}`);
+      return blobUrl;
+    } catch (error) {
+      console.error(`Error creating blob URL for file: ${filePath.name}`, error);
+      throw error;
+    }
+  }
+
+  // Ensure filePath is a string
+  if (typeof filePath !== 'string') {
+    console.error('Invalid filePath type:', typeof filePath, filePath);
+    throw new Error(`Invalid file path type: ${typeof filePath}`);
+  }
+
   // Handle web URLs directly
   if (
     filePath.startsWith("http://") ||
@@ -31,25 +55,7 @@ export const createAudioUrl = async (filePath) => {
     return fullUrl;
   }
 
-  // If we're in a browser and this is a File object from the File API
-  if (typeof filePath === "object" && filePath instanceof File) {
-    console.log(`Creating blob URL for File object: ${filePath.name}`);
-    try {
-      const blobUrl = URL.createObjectURL(filePath);
-      console.log(`Created blob URL for file: ${blobUrl}`);
-      return blobUrl;
-    } catch (error) {
-      console.error(
-        `Error creating blob URL for file: ${filePath.name}`,
-        error
-      );
-      // If we can't create a blob URL, try to use the file directly
-      if (filePath.path) {
-        return filePath.path;
-      }
-      throw error;
-    }
-  }
+  // File object handling is now done at the beginning of the function
 
   // Check if we're in Electron
   if (!window.electron?.audio) {
@@ -71,7 +77,10 @@ export const createAudioUrl = async (filePath) => {
       }
     }
 
-    return filePath; // Return the original path as fallback
+    // In development mode without Electron, we can't access local files
+    // Return the original path and let the browser handle it
+    console.log(`Returning original path for non-Electron environment: ${filePath}`);
+    return filePath;
   }
 
   try {
@@ -190,4 +199,75 @@ export const generatePlaceholderImage = (title) => {
   // In a real app, you might generate a colorful placeholder based on the title
   // For now, we'll just return a static placeholder
   return "/images/album-placeholder.svg";
+};
+
+/**
+ * Safely revokes a blob URL
+ * @param {string} blobUrl - The blob URL to revoke
+ */
+export const revokeBlobUrl = (blobUrl) => {
+  if (blobUrl && typeof blobUrl === 'string' && blobUrl.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(blobUrl);
+      console.log(`Successfully revoked blob URL: ${blobUrl}`);
+    } catch (error) {
+      console.warn(`Error revoking blob URL ${blobUrl}:`, error);
+    }
+  }
+};
+
+/**
+ * Creates a blob URL from a File object with error handling
+ * @param {File} file - The File object
+ * @returns {string} - The blob URL
+ */
+export const createBlobUrl = (file) => {
+  if (!(file instanceof File)) {
+    throw new Error('Input must be a File object');
+  }
+
+  try {
+    const blobUrl = URL.createObjectURL(file);
+    console.log(`Created blob URL for ${file.name}: ${blobUrl}`);
+    return blobUrl;
+  } catch (error) {
+    console.error(`Error creating blob URL for ${file.name}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Validates if a blob URL is still accessible
+ * @param {string} blobUrl - The blob URL to validate
+ * @returns {Promise<boolean>} - True if the blob URL is valid
+ */
+export const validateBlobUrl = async (blobUrl) => {
+  if (!blobUrl || !blobUrl.startsWith('blob:')) {
+    return false;
+  }
+
+  try {
+    // Try to create a temporary audio element to test the URL
+    const audio = new Audio();
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(false);
+      }, 1000); // 1 second timeout
+
+      audio.addEventListener('loadstart', () => {
+        clearTimeout(timeout);
+        resolve(true);
+      });
+
+      audio.addEventListener('error', () => {
+        clearTimeout(timeout);
+        resolve(false);
+      });
+
+      audio.src = blobUrl;
+    });
+  } catch (error) {
+    console.warn(`Error validating blob URL: ${error.message}`);
+    return false;
+  }
 };
